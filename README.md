@@ -17,7 +17,7 @@ The dataset is split into train dataset and test dataset. Train dataset is compr
 
 - Default model
 ```
-python ./trainKeywordNet.py --save_path data/[exp_name] --train_path [/path/to/speech_commands_v0.01] --test_path [/path/to/speech_commands_v0.01]
+python ./trainKeywordNet.py --save_path data/[exp_name] --train_path [/path/to/speech_commands_v0.01] --test_path [/path/to/speech_commands_v0.01] --noise_path [/path/to/speech_commands_v0.01/_background_noise_]
 ```
 
 #### Implemented loss functions
