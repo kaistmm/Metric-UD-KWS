@@ -6,10 +6,13 @@
 *.pcm
 *.nsml
 setup.py
-data/
 tests/
 exps/
 
+# Accepted text files
+!requirements.txt
+!train_list.txt
+!test_list.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
