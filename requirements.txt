@@ -1,0 +1,11 @@
+python=3.8
+cudatoolkit=11.3.1
+pytorch=1.10.1
+torchaudio=0.10.1
+numpy
+scipy
+scikit-learn
+tqdm
+pyyaml
+pysoundfile
+librosa
