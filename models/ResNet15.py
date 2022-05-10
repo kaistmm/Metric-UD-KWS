@@ -1,4 +1,7 @@
 '''
+* Original Code : https://github.com/castorini/honk/blob/master/utils/model.py
+* modified by jjm
+
 MIT License
 
 Copyright (c) 2018 Castorini

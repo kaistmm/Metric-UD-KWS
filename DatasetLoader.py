@@ -1,4 +1,7 @@
 '''
+* Original Code : https://github.com/clovaai/voxceleb_trainer/blob/master/DatasetLoader.py
+* modified by jjm & Youkyum
+
 Copyright (c) 2020-present NAVER Corp.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
