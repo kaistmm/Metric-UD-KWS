@@ -5,6 +5,7 @@
 *.txt
 *.pcm
 *.nsml
+*.eer
 setup.py
 tests/
 exps/
