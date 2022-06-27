@@ -1,0 +1,1 @@
+trainKeywordNet.py --trainfunc czangleproto --save_path ./results/czangleproto_300 --max_epoch 300 --lr_decay 0.97

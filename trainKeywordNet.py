@@ -35,14 +35,14 @@ import zipfile
 import datetime
 from tuneThreshold import *
 from KeywordNet import KeywordNet
-from DatasetLoader import get_data_loader
+from DatasetLoader_musan import get_data_loader
 
 parser = argparse.ArgumentParser(description = "KeywordNet");
 
 parser.add_argument('--config', type=str, default=None,  help='Config YAML file');
 
 ## Data loader
-parser.add_argument('--batch_size', type=int, default=16,  help='Batch size');
+parser.add_argument('--batch_size', type=int, default=1,  help='Batch size');
 parser.add_argument('--nDataLoaderThread', type=int, default=20, help='Number of loader threads');
 
 ## Training details
@@ -50,7 +50,6 @@ parser.add_argument('--test_interval', type=int, default=1, help='Test and save 
 parser.add_argument('--max_epoch',      type=int, default=150, help='Maximum number of epochs');
 parser.add_argument('--trainfunc', type=str, default="angleproto",    help='Loss function');
 parser.add_argument('--mixedprec',      dest='mixedprec', type=bool,  default=False, help='Enable mixed precision training');
-
 
 ## Optimizer
 parser.add_argument('--optimizer',      type=str,   default="adam", help='sgd or adam');
@@ -63,26 +62,40 @@ parser.add_argument('--weight_decay',   type=float, default=0,      help='Weight
 
 ## Load and save
 parser.add_argument('--initial_model',  type=str, default="", help='Initial model weights');
-parser.add_argument('--save_path',      type=str, default="./data/exp1", help='Path for model and logs');
+parser.add_argument('--save_path',      type=str, default="./data/test", help='Path for model and logs');
 
 # Training and test data
-parser.add_argument('--train_list',     type=str,   default="dataset_split/train_list.txt",     help='Train list');
-parser.add_argument('--test_list',      type=str,   default="dataset_split/test_list.txt",     help='Evaluation list');
-parser.add_argument('--train_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the train set');
-parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the test set');
-parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/_background_noise_", help='Absolute path to the test set');
+parser.add_argument('--train_list',     type=str,   default="/mnt/scratch/datasets/words_filtered/train_list.txt",     help='Train list');
+parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/words_filtered/test_list.txt",     help='Evaluation list');
+parser.add_argument('--train_path',     type=str,   default="/mnt/scratch/datasets/words_filtered", help='Absolute path to the train set');
+parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/words_filtered", help='Absolute path to the test set');
+
+# Noise data
+parser.add_argument('--augment',        type=bool,  default=False,  help='Augment input')
+parser.add_argument('--musan_path',     type=str,   default="/mnt/scratch/datasets/musan_split", help='Absolute path to the test set');
+parser.add_argument('--rir_path',       type=str,   default="/mnt/scratch/datasets/RIRS_NOISES/simulated_rirs", help='Absolute path to the test set');
+# parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/_background_noise_", help='Absolute path to the test set');
+
+#Google speech dataset
+# parser.add_argument('--train_list',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/train_list.txt",     help='Train list');
+# parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/test_list.txt",     help='Evaluation list');
+# parser.add_argument('--train_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the train set');
+# parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the test set');
 
 ## Model definition
 parser.add_argument('--n_mels',         type=int,   default=40,     help='Number of mel filterbanks');
 parser.add_argument('--model',          type=str,   default="ResNet15",     help='Name of model definition');
-parser.add_argument('--nOut',           type=int,   default=20,    help='Embedding size in the last FC layer (the number of classes at training');
+parser.add_argument('--nOut',           type=int,   default=1000,    help='Embedding size in the last FC layer (the number of classes at training');
 
 ## For test only
 parser.add_argument('--eval', dest='eval', action='store_true', help='Eval only')
 
 ## Edited
 parser.add_argument('--input_length',      type=int,  default=16000,  help='input length(default=16000)')
-parser.add_argument('--noise_prob',      type=float,  default=0.8,  help='noise prob')
+
+## Specific to environment removal
+parser.add_argument('--alpha', type=float, default=0, help='Alpha value for disentanglement');
+parser.add_argument('--env_iteration', type=int, default=5,  help='Iterations of environment phase');
 
 args = parser.parse_args();
 
@@ -176,7 +189,7 @@ while(1):
     print(time.strftime("%Y-%m-%d %H:%M:%S"), it, "Training %s with LR %f..."%(args.model,max(clr)));
 
     ## Train network
-    loss, traineer = s.train_network(loader=trainLoader);
+    loss, traineer = s.train_network(loader=trainLoader, alpha=args.alpha, num_steps=args.env_iteration);
 
     ## Validate and save
     if it % args.test_interval == 0:
@@ -192,7 +205,7 @@ while(1):
 
         scorefile.flush()
 
-        s.saveParameters(model_save_path+"/model%09d.model"%it);
+        s.saveParameters(model_save_path+"/model%04d.model"%it);
         
         with open(model_save_path+"/model%09d.eer"%it, 'w') as eerfile:
             eerfile.write('%.4f'%result[1])

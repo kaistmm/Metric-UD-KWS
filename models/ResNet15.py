@@ -45,14 +45,14 @@ class ResNet15(nn.Module):
         dilation = True # config["use_dilation"]
 
         self.conv0 = nn.Conv2d(1, n_maps, (3,3), padding=(1,1), bias=False)
-        self.n_layers = n_layers = 13 # 2x6(res) + 1(conv)
+        self.n_layers = 13 # 2x6(res) + 1(conv)
 
         if dilation:
             self.convs = [nn.Conv2d(n_maps, n_maps, (3, 3), padding=int(2**(i // 3)), dilation=int(2**(i // 3)),
-                bias=False) for i in range(n_layers)]
+                bias=False) for i in range(self.n_layers)]
         else:
             self.convs = [nn.Conv2d(n_maps, n_maps, (3, 3), padding=1, dilation=1,
-                bias=False) for _ in range(n_layers)]
+                bias=False) for _ in range(self.n_layers)]
 
         for i, conv in enumerate(self.convs):
             self.add_module("bn{}".format(i + 1), nn.BatchNorm2d(n_maps, affine=False))

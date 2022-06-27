@@ -34,8 +34,9 @@ from torchaudio import transforms
 import numpy, math, pdb, sys, random
 import time, os, itertools, shutil, importlib
 from tuneThreshold import tuneThresholdfromScore
-from DatasetLoader import loadWAV
+from DatasetLoader_musan import loadWAV
 import librosa
+from ConfModel import *
 
 class KeywordNet(nn.Module):
 
@@ -48,8 +49,11 @@ class KeywordNet(nn.Module):
         LossFunction = importlib.import_module('loss.'+trainfunc).__getattribute__('LossFunction')
         self.__L__ = LossFunction(**kwargs).cuda();
 
+        self.__S2E__ = ConfModelBC(num_layers=1, **kwargs).cuda();
+
         Optimizer = importlib.import_module('optimizer.'+optimizer).__getattribute__('Optimizer')
         self.__optimizer__ = Optimizer(list(self.__S__.parameters()) + list(self.__L__.parameters()), **kwargs);
+        self.__optimizerS2E__ = Optimizer(self.__S2E__.parameters(), **kwargs);
 
         Scheduler = importlib.import_module('scheduler.'+scheduler).__getattribute__('Scheduler')
         self.__scheduler__, self.lr_step = Scheduler(self.__optimizer__, **kwargs)
@@ -64,12 +68,11 @@ class KeywordNet(nn.Module):
         if mixedprec:
             self.scaler = GradScaler() 
 
-
     ## ===== ===== ===== ===== ===== ===== ===== =====
     ''' Train network '''
     ## ===== ===== ===== ===== ===== ===== ===== =====
 
-    def train_network(self, loader):
+    def train_network(self, loader, alpha=1, num_steps=1):
 
         self.train();
 
@@ -81,12 +84,14 @@ class KeywordNet(nn.Module):
         top1    = 0;    # EER or accuracy
 
         criterion   = torch.nn.CrossEntropyLoss()
+        conf_labels = torch.LongTensor([1]*stepsize+[0]*stepsize).cuda()
 
         tstart = time.time()
         
         for data in loader: #data = torch.Size([N,20,2,16000])
 
             self.zero_grad();
+
             batchsize, minibatchsize, num_wav, num_sample = data.shape
             data = data.view(-1, num_wav, num_sample) # [N*20, 2, 16000]
 
@@ -103,19 +108,56 @@ class KeywordNet(nn.Module):
 
             feat = torch.stack(feat, dim=1).squeeze() #feat.shape = torch.Size([N*20, 2, 20])
 
-            conf_loss   = 0
-            feat = feat.view(batchsize, minibatchsize, num_wav, minibatchsize) #feat.shape = torch.Size([N, 20, 2, 20])
-            
-            batchloss = []
-            batchprec = []
+            ''' Remove channel '''
 
-            with autocast(enabled = self.mixedprec):
-                for _, one_feat in enumerate(feat):
-                    _nloss, _prec1 = self.__L__.forward(one_feat,None)
-                    batchloss.append(_nloss)
-                    batchprec.append(_prec1)
-                nloss = torch.mean(torch.stack(batchloss))
-                prec1 = torch.mean(torch.stack(batchprec))
+            if alpha > 0:
+                pdb.set_trace()
+                out_a_ = feat[:,0,:].detach()
+                out_s_ = feat[:,1,:].detach()
+                out_p_ = feat[:,2,:].detach()
+
+                # # ==================== TRAIN DISCRIMINATOR ====================
+
+                for ii in range(0,num_steps):
+
+                    conf_input = torch.cat((torch.cat((out_a_,out_s_),1),torch.cat((out_a_,out_p_),1)),0)
+
+                    conf_output = self.__S2E__(conf_input)
+
+                    dloss1  = criterion(conf_output, conf_labels)
+
+                    dloss1.backward();
+                    self.__optimizerS2E__.step();
+                    self.__optimizerS2E__.zero_grad();
+
+                    # print(dloss1)
+
+                # # ==================== TRAIN NORMAL AND BACKPROP THROUGH DISCRIMINATOR ====================
+
+                conf_input = torch.cat((torch.cat((feat[:,0,:],feat[:,1,:]),1),torch.cat((feat[:,0,:],feat[:,2,:]),1)),0)
+
+                conf_output = self.__S2E__(conf_input)
+
+                conf_loss   = criterion(conf_output, conf_labels)
+
+                nloss, prec1 = self.__L__.forward(feat[:,[0,2],:],None)
+
+                nloss += conf_loss * alpha
+            
+            else:
+                conf_loss   = 0
+                feat = feat.view(batchsize, minibatchsize, num_wav, -1) #feat.shape = torch.Size([N, 20, 2, 20])
+                
+                batchloss = []
+                batchprec = []
+
+                with autocast(enabled = self.mixedprec):
+                    for _, one_feat in enumerate(feat):
+                        _nloss, _prec1 = self.__L__.forward(one_feat,None)
+                        batchloss.append(_nloss)
+                        batchprec.append(_prec1)
+                    nloss = torch.mean(torch.stack(batchloss))
+                    prec1 = torch.mean(torch.stack(batchprec))
 
             loss    += nloss.detach().cpu();
             top1    += prec1
@@ -183,7 +225,6 @@ class KeywordNet(nn.Module):
 
         ## Save all features to file
         for idx, file in enumerate(setfiles):
-
             inp1 = torch.FloatTensor(loadWAV(os.path.join(test_path,file))).cuda() #torch.Size([16000])
 
             with torch.no_grad():

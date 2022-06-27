@@ -1,0 +1,1 @@
+trainKeywordNet.py --trainfunc czreangleproto --save_path ./results/czreangleproto
