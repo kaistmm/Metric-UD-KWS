@@ -112,7 +112,6 @@ class wav_split(Dataset):
 
         # in_len = self.input_length
         if self.augment:
-            pdb.set_trace()
             augtype = random.randint(0,4)
             if augtype == 1:
                 audio   = self.AUG.reverberate(audio)
@@ -139,7 +138,7 @@ class AugmentWAV(object):
         self.noisetypes = ['noise','speech','music']
 
         self.noisesnr   = {'noise':[0,15],'speech':[13,20],'music':[5,15]}
-        self.numnoise   = {'noise':[1,1], 'speech':[3,7],  'music':[1,1] }
+        self.numnoise   = {'noise':[1,1], 'speech':[1,2],  'music':[1,1] }
         self.noiselist  = {}
 
         augment_files   = glob.glob(os.path.join(musan_path,'*/*/*/*.wav'));
@@ -166,9 +165,12 @@ class AugmentWAV(object):
             # noiseaudio = noiseaudio.numpy()
             noise_snr   = random.uniform(self.noisesnr[noisecat][0],self.noisesnr[noisecat][1])
             noise_db = 10 * numpy.log10(numpy.mean(noiseaudio[0] ** 2)+1e-4) 
-            noises.append(numpy.sqrt(10 ** ((clean_db - noise_db - noise_snr) / 10)) * noiseaudio)
-           
-        audio = numpy.sum(numpy.concatenate(noises,axis=0),axis=0,keepdims=True) + audio
+            noiseaudio = numpy.sqrt(10 ** ((clean_db - noise_db - noise_snr) / 10)) * noiseaudio
+            noises.append(numpy.expand_dims(noiseaudio, axis=1))
+        
+        pdb.set_trace()
+        noise_audio = numpy.concatenate(noises,axis=1)   
+        audio = numpy.sum(noise_audio, axis=1, keepdims=True) + audio
         # audio = torch.from_numpy(audio)
         return audio
 

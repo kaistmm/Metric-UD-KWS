@@ -1,1 +1,0 @@
-trainKeywordNet.py --save_path ./results/test

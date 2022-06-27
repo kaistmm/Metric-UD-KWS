@@ -97,8 +97,6 @@ class wav_split(Dataset):
             audio_aug.append(self.augment_wav(audio[0]))
             audio_aug.append(self.augment_wav(audio[1]))
 
-            # if self.alpha > 0 :
-                
             audio_aug = torch.stack(audio_aug, dim=0)
             audio_augs.append(audio_aug)
 
