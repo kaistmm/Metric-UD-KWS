@@ -168,9 +168,8 @@ class AugmentWAV(object):
             noiseaudio = numpy.sqrt(10 ** ((clean_db - noise_db - noise_snr) / 10)) * noiseaudio
             noises.append(numpy.expand_dims(noiseaudio, axis=1))
         
-        pdb.set_trace()
         noise_audio = numpy.concatenate(noises,axis=1)   
-        audio = numpy.sum(noise_audio, axis=1, keepdims=True) + audio
+        audio = numpy.sum(noise_audio, axis=1, keepdims=True).squeeze(1) + audio
         # audio = torch.from_numpy(audio)
         return audio
 
