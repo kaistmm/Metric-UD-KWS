@@ -27,7 +27,7 @@ THE SOFTWARE.
 #-*- coding: utf-8 -*-
 
 import sys, time, os, argparse, socket
-import numpy
+import numpy, random
 import pdb
 import torch
 import glob
@@ -43,6 +43,7 @@ parser.add_argument('--config', type=str, default=None,  help='Config YAML file'
 
 ## Data loader
 parser.add_argument('--batch_size', type=int, default=1,  help='Batch size');
+parser.add_argument('--dict_size', type=int, default=320,  help='Dictionary size');
 parser.add_argument('--nDataLoaderThread', type=int, default=20, help='Number of loader threads');
 
 ## Training details
@@ -63,12 +64,13 @@ parser.add_argument('--weight_decay',   type=float, default=0,      help='Weight
 ## Load and save
 parser.add_argument('--initial_model',  type=str, default="", help='Initial model weights');
 parser.add_argument('--save_path',      type=str, default="./data/test", help='Path for model and logs');
+parser.add_argument('--tsne_path',      type=str, default="test.png", help='Path for tsne image');
 
 # Training and test data
 parser.add_argument('--train_list',     type=str,   default="/mnt/scratch/datasets/words_filtered/train_list.txt",     help='Train list');
-parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/words_filtered/test_list.txt",     help='Evaluation list');
+# parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/words_filtered/test_list.txt",     help='Evaluation list');
 parser.add_argument('--train_path',     type=str,   default="/mnt/scratch/datasets/words_filtered", help='Absolute path to the train set');
-parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/words_filtered", help='Absolute path to the test set');
+# parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/words_filtered", help='Absolute path to the test set');
 
 # Noise data
 parser.add_argument('--augment',        type=bool,  default=False,  help='Augment input')
@@ -78,9 +80,9 @@ parser.add_argument('--rir_path',       type=str,   default="/mnt/scratch/datase
 
 #Google speech dataset
 # parser.add_argument('--train_list',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/train_list.txt",     help='Train list');
-# parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/test_list.txt",     help='Evaluation list');
+parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/test_list.txt",     help='Evaluation list');
 # parser.add_argument('--train_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the train set');
-# parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the test set');
+parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the test set');
 
 ## Model definition
 parser.add_argument('--n_mels',         type=int,   default=40,     help='Number of mel filterbanks');
@@ -90,14 +92,37 @@ parser.add_argument('--nOut',           type=int,   default=1000,    help='Embed
 ## For test only
 parser.add_argument('--eval', dest='eval', action='store_true', help='Eval only')
 
+## For t-SNE
+parser.add_argument('--tsne', dest='tsne', action='store_true', help='t-SNE')
+
+## For fine-tunning, add layer, freezing
+parser.add_argument('--fine_tunning',        type=bool,  default=False,  help='Fine_tunning')
+
 ## Edited
 parser.add_argument('--input_length',      type=int,  default=16000,  help='input length(default=16000)')
+parser.add_argument('--seed',      type=int,  default=42,  help='seed number')
 
 ## Specific to environment removal
 parser.add_argument('--alpha', type=float, default=0, help='Alpha value for disentanglement');
 parser.add_argument('--env_iteration', type=int, default=5,  help='Iterations of environment phase');
 
 args = parser.parse_args();
+
+
+############################################
+''' Setting '''
+############################################
+## Random seed 
+def seed_everything(seed: int = 42):
+    random.seed(seed)
+    numpy.random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)  # type: ignore
+    torch.backends.cudnn.deterministic = True  # type: ignore
+    torch.backends.cudnn.benchmark = True  # type: ignore
+
+seed_everything(args.seed)
 
 ## Initialise directories
 model_save_path     = args.save_path+"/model"
@@ -131,8 +156,11 @@ elif(args.initial_model != ""):
 
 for ii in range(0,it-1):
     s.__scheduler__.step()
-        
-## Evaluation code
+
+
+############################################
+''' Evaluation code '''
+############################################
 if args.eval == True:
         
     sc, lab, trials = s.evaluateFromList(args.test_list, print_interval=100, test_path=args.test_path)
@@ -163,6 +191,17 @@ if args.eval == True:
                     outfile.write('%.4f %s\n'%(val,trials[vi]))
             quit();
 
+############################################
+''' t-SNE code '''
+############################################
+if args.tsne == True:
+    s.tsne_drawer(args.test_list, print_interval=100, test_path=args.test_path, savename=args.tsne_path)
+
+    quit();
+
+############################################
+''' Train & Validation code '''
+############################################
 ## save code
 pyfiles = glob.glob('./*.py')
 strtime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")

@@ -48,7 +48,7 @@ def worker_init_fn(worker_id):
     numpy.random.seed(numpy.random.get_state()[1][0] + worker_id)
 
 class wav_split(Dataset):
-    def __init__(self, dataset_file_name, train_path, augment, musan_path, rir_path, n_mels, alpha, input_length):
+    def __init__(self, dataset_file_name, train_path, dict_size, augment, musan_path, rir_path, n_mels, alpha, input_length):
         self.dataset_file_name = dataset_file_name;
 
         self.data_dict = {};
@@ -63,7 +63,7 @@ class wav_split(Dataset):
         self.musan_path = musan_path
         self.rir_path   = rir_path
         self.augment    = augment
-
+        self.dict_size = dict_size
         self.alpha  = alpha
 
         ### Read Training Files...
@@ -83,8 +83,7 @@ class wav_split(Dataset):
 
     def __getitem__(self, index):
         audio_batch = []
-        
-        selected_dict = random.sample(list(self.data_dict.keys()), 320) #len(self.data_dict.keys()) = 1000 : HAD , YOU ...
+        selected_dict = random.sample(list(self.data_dict.keys()), self.dict_size) #len(self.data_dict.keys()) = 1000 : HAD , YOU ...
         for keyword in selected_dict:                                   #len(selected_dict) = 160
             audio = load_wav(self.data_dict[keyword], index)#(2, 16000) #len(self.data_dict[keyword]) = 1000
             audio_batch.append(audio)
@@ -292,12 +291,16 @@ def loadWAV(filename):
 
         audio = audio[int(margin/2):16000 + int(margin/2)]
 
+        ## Random Start
+        # noise_start =  random.randint(0, len_audio - max_audio - 1)
+        # audio = audio[noise_start : (noise_start + max_audio)] # bg_noise.shape = (16000,)
+
     return audio
 
 
-def get_data_loader(dataset_file_name, batch_size, nDataLoaderThread, augment, musan_path, rir_path, train_path, alpha, n_mels, input_length, **kwargs):
+def get_data_loader(dataset_file_name, batch_size, dict_size, nDataLoaderThread, augment, musan_path, rir_path, train_path, alpha, n_mels, input_length, **kwargs):
 
-    train_dataset = wav_split(dataset_file_name, train_path, augment, musan_path, rir_path, n_mels, alpha, input_length)
+    train_dataset = wav_split(dataset_file_name, train_path, dict_size, augment, musan_path, rir_path, n_mels, alpha, input_length)
 
     train_dataset[1]
 

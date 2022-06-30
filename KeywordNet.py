@@ -37,14 +37,20 @@ from tuneThreshold import tuneThresholdfromScore
 from DatasetLoader_musan import loadWAV
 import librosa
 from ConfModel import *
+from sklearn.manifold import TSNE
+import seaborn as sns
+import pandas as pd
+import matplotlib.pyplot as plt
 
 class KeywordNet(nn.Module):
 
-    def __init__(self, model, optimizer, scheduler, trainfunc, mixedprec, n_mels, **kwargs):
+    def __init__(self, model, optimizer, scheduler, trainfunc, mixedprec, n_mels, fine_tunning, **kwargs):
         super(KeywordNet, self).__init__();
 
         KeywordNetModel = importlib.import_module('models.'+model).__getattribute__('MainModel')
         self.__S__ = KeywordNetModel(**kwargs).cuda();
+        ## For fine-tunning t-SNE
+        # self.__S__.fc = nn.Linear(1000,20)
 
         LossFunction = importlib.import_module('loss.'+trainfunc).__getattribute__('LossFunction')
         self.__L__ = LossFunction(**kwargs).cuda();
@@ -67,6 +73,19 @@ class KeywordNet(nn.Module):
         
         if mixedprec:
             self.scaler = GradScaler() 
+
+        ## ===== ===== ===== ===== ===== ===== ===== =====
+        ''' Fine-tunning '''
+        ## ===== ===== ===== ===== ===== ===== ===== =====
+        if fine_tunning:
+            for name, param in self.__S__.named_parameters():
+                if name in ['conv0.weight', 'bn1.running_mean', 'bn1.running_var', 'bn1.num_batches_tracked', 'conv1.weight',
+                                            'bn2.running_mean', 'bn2.running_var', 'bn2.num_batches_tracked', 'conv2.weight',   
+                                            'bn3.running_mean', 'bn3.running_var', 'bn3.num_batches_tracked', 'conv3.weight']:
+                # if name in ['output.weight','output.bias']:
+                    param.requires_grad = False
+
+            self.__S__.fc = nn.Linear(1000,20)
 
     ## ===== ===== ===== ===== ===== ===== ===== =====
     ''' Train network '''
@@ -111,7 +130,6 @@ class KeywordNet(nn.Module):
             ''' Remove channel '''
 
             if alpha > 0:
-                pdb.set_trace()
                 out_a_ = feat[:,0,:].detach()
                 out_s_ = feat[:,1,:].detach()
                 out_p_ = feat[:,2,:].detach()
@@ -234,7 +252,8 @@ class KeywordNet(nn.Module):
 
                 ref_feat = self.__S__.forward(inp1).detach().cpu() #torch.Size([1, 20])
 
-            filename = '%06d.wav'%idx #'000000.wav'
+
+            filename = '%04d.wav'%idx #'000000.wav'
 
             feats[file]     = ref_feat 
             # feats = {'bed/004ae714_nohash_1.wav': tensor([[ 2.6805, -3.2256, ... ,-0.2719]])} : feature 저장
@@ -314,3 +333,75 @@ class KeywordNet(nn.Module):
                 continue;
 
             self_state[name].copy_(param);
+
+    ## ===== ===== ===== ===== ===== ===== ===== =====
+    ''' Draw t-SNE '''
+    ## ===== ===== ===== ===== ===== ===== ===== =====
+    def tsne_drawer(self, listfilename, savename, print_interval=100, test_path='', num_eval=10):
+        
+        self.eval();
+        
+        lines       = []
+        files       = []
+        feats       = {}
+        tstart      = time.time()
+    
+        ## Read all lines
+        with open(listfilename) as listfile: #listfilename  = '/mnt/scratch/datasets/words_filtered/test_list.txt'
+            while True:
+                line = listfile.readline();  #line = '1 SHOOK/SHOOK_3157-68361-0001_37.wav SHOOK/SHOOK_8494-244431-0014_6.wav\n'
+                if (not line): 
+                    break;
+
+                data = line.split();         #data = ['1', 'SHOOK/SHOOK_3157-68361-0001_37.wav', 'SHOOK/SHOOK_8494-244431-0014_6.wav']
+
+                ## Append random label if missing
+                if len(data) == 2: data = [random.randint(0,1)] + data
+
+                files.append(data[1])
+                files.append(data[2])
+                lines.append(line)
+        
+        setfiles = list(set(files))
+        setfiles.sort()
+
+        ## Save all features to file
+        features = []
+        labels = []
+
+        for idx, file in enumerate(setfiles):
+            inp1 = torch.FloatTensor(loadWAV(os.path.join(test_path,file))).cuda() #torch.Size([16000])
+
+            with torch.no_grad():
+
+                inp1 = self.mfcc(inp1)
+                inp1 = inp1.transpose(0,1).unsqueeze(0) #torch.Size([16000])->[40,101]->[1,101,40]
+
+                ref_feat = self.__S__.forward(inp1).detach().cpu() #torch.Size([1, 1000])
+                
+            filename = '%04d.wav'%idx #'000000.wav'
+
+            features.append(ref_feat)
+            labels.append(file.split('/')[0])
+            
+            telapsed = time.time() - tstart
+
+            if idx % print_interval == 0:
+                sys.stdout.write("\rReading %d of %d: %.2f Hz, embedding size %d"%(idx,len(setfiles),idx/telapsed,ref_feat.size()[1]));
+        
+        input_feature = torch.stack(features, dim=0).squeeze(1)
+
+        ## t-SNE
+        tsne = TSNE(n_components=2, perplexity=30, n_iter=300)
+        tsne_ref = tsne.fit_transform(input_feature)
+
+        df = pd.DataFrame(tsne_ref, index=tsne_ref[0:,1])
+        df['x'] = tsne_ref[:,0]
+        df['y'] = tsne_ref[:,1]
+        df['Label'] = labels
+
+        sns.lmplot(x="x", y="y", data=df, fit_reg=False, legend=True, size=20, hue='Label', scatter_kws={"s":200, "alpha":0.5})
+        plt.title('t-SNE result', weight='bold').set_fontsize('14')
+        plt.xlabel('x', weight='bold').set_fontsize('10')
+        plt.ylabel('y', weight='bold').set_fontsize('10')
+        plt.savefig(savename, bbox_inches='tight', pad_inches=1)

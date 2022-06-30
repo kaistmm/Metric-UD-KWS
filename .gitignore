@@ -6,6 +6,8 @@
 *.pcm
 *.nsml
 *.eer
+*.cmd
+*.zip
 setup.py
 tests/
 exps/

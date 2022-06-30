@@ -85,7 +85,7 @@ class wav_split(Dataset):
     def __getitem__(self, index):
         audio_batch = []
         
-        selected_dict = random.sample(list(self.data_dict.keys()), 320) #len(self.data_dict.keys()) = 1000 : HAD , YOU ...
+        selected_dict = random.sample(list(self.data_dict.keys()), 20) #len(self.data_dict.keys()) = 1000 : HAD , YOU ...
         for keyword in selected_dict:                                   #len(selected_dict) = 160
             audio = load_wav(self.data_dict[keyword], index)#(2, 16000) #len(self.data_dict[keyword]) = 1000
             audio_batch.append(audio)

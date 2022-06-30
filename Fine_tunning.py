@@ -27,7 +27,7 @@ THE SOFTWARE.
 #-*- coding: utf-8 -*-
 
 import sys, time, os, argparse, socket
-import numpy
+import numpy, random
 import pdb
 import torch
 import glob
@@ -85,6 +85,7 @@ parser.add_argument('--nOut',           type=int,   default=1000,    help='Embed
 
 ## For test only
 parser.add_argument('--eval', dest='eval', action='store_true', help='Eval only')
+parser.add_argument('--seed',      type=int,  default=42,  help='seed number')
 
 ## Edited
 parser.add_argument('--input_length',      type=int,  default=16000,  help='input length(default=16000)')
@@ -95,6 +96,21 @@ parser.add_argument('--alpha', type=float, default=0, help='Alpha value for dise
 parser.add_argument('--env_iteration', type=int, default=5,  help='Iterations of environment phase');
 
 args = parser.parse_args();
+
+############################################
+''' Setting '''
+############################################
+## Random seed 
+def seed_everything(seed: int = 42):
+    random.seed(seed)
+    numpy.random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)  # type: ignore
+    torch.backends.cudnn.deterministic = True  # type: ignore
+    torch.backends.cudnn.benchmark = True  # type: ignore
+
+seed_everything(args.seed)
 
 ## Initialise directories
 model_save_path     = args.save_path+"/model"
