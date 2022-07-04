@@ -111,7 +111,7 @@ class wav_split(Dataset):
 
         # in_len = self.input_length
         if self.augment:
-            augtype = random.randint(0,4)
+            augtype = random.randint(0,5)
             if augtype == 1:
                 audio   = self.AUG.reverberate(audio)
             elif augtype == 2:
@@ -130,8 +130,6 @@ class AugmentWAV(object):
 
     def __init__(self, musan_path, rir_path):
 
-        # self.max_frames = max_frames
-        # self.max_audio  = max_audio = max_frames * 160 + 240
         self.max_audio = 16000
 
         self.noisetypes = ['noise','speech','music']
@@ -147,10 +145,11 @@ class AugmentWAV(object):
                 self.noiselist[file.split('/')[-4]] = []
             self.noiselist[file.split('/')[-4]].append(file)
 
-        self.rir_files  = glob.glob(os.path.join(rir_path,'*/*/*.wav'));
+        # self.rir_files  = glob.glob(os.path.join(rir_path,'*/*/*.wav'));
+        self.rir = numpy.load('rir.npy')
+
 
     def additive_noise(self, noisecat, audio):
-        # audio = audio.numpy()
         clean_db = 10 * numpy.log10(numpy.mean(audio ** 2)+1e-4) 
 
         numnoise    = self.numnoise[noisecat]
@@ -161,7 +160,7 @@ class AugmentWAV(object):
         for noise in noiselist:
 
             noiseaudio  = loadWAV(noise)
-            # noiseaudio = noiseaudio.numpy()
+
             noise_snr   = random.uniform(self.noisesnr[noisecat][0],self.noisesnr[noisecat][1])
             noise_db = 10 * numpy.log10(numpy.mean(noiseaudio[0] ** 2)+1e-4) 
             noiseaudio = numpy.sqrt(10 ** ((clean_db - noise_db - noise_snr) / 10)) * noiseaudio
@@ -169,23 +168,35 @@ class AugmentWAV(object):
         
         noise_audio = numpy.concatenate(noises,axis=1)   
         audio = numpy.sum(noise_audio, axis=1, keepdims=True).squeeze(1) + audio
-        # audio = torch.from_numpy(audio)
+
         return audio
 
     def reverberate(self, audio):
         # audio = audio.numpy()
-        rir_file    = random.choice(self.rir_files)
+        # rir_file    = random.choice(self.rir_files)
         
-        rir     = loadWAV(rir_file)
+        # rir     = loadWAV(rir_file)
         # rir     = rir.numpy()
-        rir     = numpy.expand_dims(rir.astype(numpy.float),0)
-        audio   = numpy.expand_dims(audio.astype(numpy.float),0)
-        rir     = rir / numpy.sqrt(numpy.sum(rir**2))
+        # rir     = numpy.expand_dims(rir.astype(numpy.float),0)
+        # audio   = numpy.expand_dims(audio.astype(numpy.float),0)
+        SIGPRO_MIN_RANDGAIN = -7
+        SIGPRO_MAX_RANDGAIN = 3
 
-        audio = signal.convolve(audio, rir, mode='full')[:,:self.max_audio]
-        audio = audio.squeeze(0)
+        rir_filts = random.choice(self.rir)
+        rir_gains = numpy.random.uniform(SIGPRO_MIN_RANDGAIN, SIGPRO_MAX_RANDGAIN, 1)
+
+        audio = gen_echo(audio, rir_filts, rir_gains)
+        # rir     = rir / numpy.sqrt(numpy.sum(rir**2))
+
+        # audio = signal.convolve(audio, rir, mode='full')[:,:self.max_audio]
+        # audio = audio.squeeze(0)
         return  audio
 
+def gen_echo(ref, rir, filterGain): ## for RIR
+    rir  = numpy.multiply(rir, pow(10, 0.1 * filterGain))
+    echo = signal.convolve(ref, rir, mode='full')[:len(ref)]
+
+    return echo
 
 def load_wav(filelist, index):
     # Read wav file and convert to torch tensor
@@ -221,7 +232,7 @@ def load_wav(filelist, index):
 
         audio = audio[int(margin/2):16000 + int(margin/2)]
 
-    #audio_pos padding
+    ## audio_pos padding
     if len_audio_pos < max_audio:
         shortage = math.floor((max_audio - len_audio_pos + 1) / 2)
 
@@ -302,7 +313,7 @@ def get_data_loader(dataset_file_name, batch_size, dict_size, nDataLoaderThread,
 
     train_dataset = wav_split(dataset_file_name, train_path, dict_size, augment, musan_path, rir_path, n_mels, alpha, input_length)
 
-    train_dataset[1]
+    # train_dataset[1]
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,

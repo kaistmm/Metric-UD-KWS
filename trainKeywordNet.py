@@ -68,9 +68,9 @@ parser.add_argument('--tsne_path',      type=str, default="test.png", help='Path
 
 # Training and test data
 parser.add_argument('--train_list',     type=str,   default="/mnt/scratch/datasets/words_filtered/train_list.txt",     help='Train list');
-# parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/words_filtered/test_list.txt",     help='Evaluation list');
+parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/words_filtered/test_list.txt",     help='Evaluation list');
 parser.add_argument('--train_path',     type=str,   default="/mnt/scratch/datasets/words_filtered", help='Absolute path to the train set');
-# parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/words_filtered", help='Absolute path to the test set');
+parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/words_filtered", help='Absolute path to the test set');
 
 # Noise data
 parser.add_argument('--augment',        type=bool,  default=False,  help='Augment input')
@@ -79,10 +79,10 @@ parser.add_argument('--rir_path',       type=str,   default="/mnt/scratch/datase
 # parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/_background_noise_", help='Absolute path to the test set');
 
 #Google speech dataset
-# parser.add_argument('--train_list',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/train_list.txt",     help='Train list');
-parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/test_list.txt",     help='Evaluation list');
-# parser.add_argument('--train_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the train set');
-parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the test set');
+parser.add_argument('--fine_train_list',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/train_list.txt",     help='Train list');
+parser.add_argument('--fine_train_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the train set');
+# parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/test_list.txt",     help='Evaluation list');
+# parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the test set');
 
 ## Model definition
 parser.add_argument('--n_mels',         type=int,   default=40,     help='Number of mel filterbanks');
@@ -219,6 +219,10 @@ f.close()
 scorefile = open(result_save_path+"/scores.txt", "a+");
 
 ## Initialise data loader
+if args.fine_tunning == True:
+    args.train_list = args.fine_train_list
+    args.train_path = args.fine_train_path
+
 trainLoader = get_data_loader(args.train_list, **vars(args));
 
 while(1):   
