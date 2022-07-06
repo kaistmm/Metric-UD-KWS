@@ -48,7 +48,7 @@ def worker_init_fn(worker_id):
     numpy.random.seed(numpy.random.get_state()[1][0] + worker_id)
 
 class wav_split(Dataset):
-    def __init__(self, dataset_file_name, train_path, dict_size, augment, musan_path, rir_path, n_mels, alpha, input_length):
+    def __init__(self, dataset_file_name, train_path, dict_size, augment, fine_tunning, musan_path, rir_path, n_mels, alpha, input_length):
         self.dataset_file_name = dataset_file_name;
 
         self.data_dict = {};
@@ -63,6 +63,7 @@ class wav_split(Dataset):
         self.musan_path = musan_path
         self.rir_path   = rir_path
         self.augment    = augment
+        self.fine_tunning = fine_tunning
         self.dict_size = dict_size
         self.alpha  = alpha
 
@@ -79,13 +80,19 @@ class wav_split(Dataset):
             if keyword not in self.data_dict:
                 self.data_dict[keyword] = [filename]        #{'HOWS': ["/mnt/scratch/datasets/words_filtered/HOWS/HOW'S_8023-286253-0007_19.wav"]}
             else:
-                self.data_dict[keyword].append(filename)     
+                self.data_dict[keyword].append(filename)
+
+        # if self.fine_tunning:
+        self.data_dict['__silence__'] = []  
 
     def __getitem__(self, index):
         audio_batch = []
         selected_dict = random.sample(list(self.data_dict.keys()), self.dict_size) #len(self.data_dict.keys()) = 1000 : HAD , YOU ...
         for keyword in selected_dict:                                   #len(selected_dict) = 160
-            audio = load_wav(self.data_dict[keyword], index)#(2, 16000) #len(self.data_dict[keyword]) = 1000
+            if keyword == '__silence__':
+                audio = load_silence()
+            else:
+                audio = load_wav(self.data_dict[keyword], index)#(2, 16000) #len(self.data_dict[keyword]) = 1000
             audio_batch.append(audio)
 
         ## Noise augmentation
@@ -102,7 +109,6 @@ class wav_split(Dataset):
         # audio_aug_batch = torch.stack(audio_augs, dim=0)
         audio_aug_batch = numpy.stack(audio_augs, axis=0)
         return torch.FloatTensor(audio_aug_batch) #audio_aug_batch.shape = (20, 2, 16000)
-
 
     def __len__(self):
         return len(self.lines)//len(self.data_dict)
@@ -198,6 +204,20 @@ def gen_echo(ref, rir, filterGain): ## for RIR
 
     return echo
 
+def load_silence(max_audio=16000):
+    audio = numpy.zeros(max_audio)
+    audio_pos = numpy.zeros(max_audio)
+
+    if audio.shape[0] != 16000 or audio_pos.shape[0] != 16000:
+        print('wrong')
+
+    feats = []
+    feats.append(audio)
+    feats.append(audio_pos)
+    feat = numpy.stack(feats, axis=0)
+
+    return feat
+
 def load_wav(filelist, index):
     # Read wav file and convert to torch tensor
     audio, sample_rate = soundfile.read(filelist[index])
@@ -274,6 +294,10 @@ def _timeshift_audio(self, data):
     data = np.pad(data, (a, b), "constant")
     return data[:len(data) - a] if a else data[b:]
 
+def loadSilence(max_audio=16000):
+    audio = numpy.zeros(max_audio)
+
+    return audio
 
 def loadWAV(filename):             
     # Maximum audio length
@@ -309,9 +333,9 @@ def loadWAV(filename):
     return audio
 
 
-def get_data_loader(dataset_file_name, batch_size, dict_size, nDataLoaderThread, augment, musan_path, rir_path, train_path, alpha, n_mels, input_length, **kwargs):
+def get_data_loader(dataset_file_name, batch_size, dict_size, nDataLoaderThread, augment, fine_tunning, musan_path, rir_path, train_path, alpha, n_mels, input_length, **kwargs):
 
-    train_dataset = wav_split(dataset_file_name, train_path, dict_size, augment, musan_path, rir_path, n_mels, alpha, input_length)
+    train_dataset = wav_split(dataset_file_name, train_path, dict_size, augment, fine_tunning, musan_path, rir_path, n_mels, alpha, input_length)
 
     # train_dataset[1]
 

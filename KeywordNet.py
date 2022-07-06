@@ -34,7 +34,7 @@ from torchaudio import transforms
 import numpy, math, pdb, sys, random
 import time, os, itertools, shutil, importlib
 from tuneThreshold import tuneThresholdfromScore
-from DatasetLoader_musan import loadWAV
+from DatasetLoader_musan import loadWAV, loadSilence
 from ConfModel import *
 from sklearn.manifold import TSNE
 import seaborn as sns
@@ -43,7 +43,7 @@ import matplotlib.pyplot as plt
 
 class KeywordNet(nn.Module):
 
-    def __init__(self, model, optimizer, scheduler, trainfunc, mixedprec, n_mels, fine_tunning, **kwargs):
+    def __init__(self, model, optimizer, scheduler, trainfunc, mixedprec, n_mels, **kwargs):
         super(KeywordNet, self).__init__();
 
         KeywordNetModel = importlib.import_module('models.'+model).__getattribute__('MainModel')
@@ -76,15 +76,18 @@ class KeywordNet(nn.Module):
         ## ===== ===== ===== ===== ===== ===== ===== =====
         ''' Fine-tunning '''
         ## ===== ===== ===== ===== ===== ===== ===== =====
-        if fine_tunning:
-            for name, param in self.__S__.named_parameters():
-                if name in ['conv0.weight', 'bn1.running_mean', 'bn1.running_var', 'bn1.num_batches_tracked', 'conv1.weight',
-                                            'bn2.running_mean', 'bn2.running_var', 'bn2.num_batches_tracked', 'conv2.weight',   
-                                            'bn3.running_mean', 'bn3.running_var', 'bn3.num_batches_tracked', 'conv3.weight']:
-                # if name in ['output.weight','output.bias']:
-                    param.requires_grad = False
-
-            self.__S__.fc = nn.Linear(1000,20)
+        # if fine_tunning:
+        #     for name, param in self.__S__.named_parameters():
+        #         if name in ['conv0.weight', 'bn1.running_mean', 'bn1.running_var', 'bn1.num_batches_tracked', 'conv1.weight',
+        #                                     'bn2.running_mean', 'bn2.running_var', 'bn2.num_batches_tracked', 'conv2.weight',   
+        #                                     'bn3.running_mean', 'bn3.running_var', 'bn3.num_batches_tracked', 'conv3.weight']:
+        #         # if name in ['output.weight','output.bias']:
+        #             param.requires_grad = False
+        #     # Adding layers
+        #     self.__S__ = nn.Sequential(
+        #         self.__S__,
+        #         nn.Linear(1000,20).cuda()
+        #     )
 
     ## ===== ===== ===== ===== ===== ===== ===== =====
     ''' Train network '''
@@ -122,6 +125,7 @@ class KeywordNet(nn.Module):
             for inp in data:  #inp.shape = [N*20,101,40]
                 with autocast(enabled = self.mixedprec):
                     outp = self.__S__.forward(inp)
+                # import pdb; pdb.set_trace()
                 feat.append(outp) #feat[1].shape = torch.Size([N*20, 20]) = outp
 
             feat = torch.stack(feat, dim=1).squeeze() #feat.shape = torch.Size([N*20, 2, 20])
@@ -207,7 +211,6 @@ class KeywordNet(nn.Module):
         
         return (loss/counter, top1/counter);
 
-
     ## ===== ===== ===== ===== ===== ===== ===== =====
     ''' Evaluate from list '''
     ## ===== ===== ===== ===== ===== ===== ===== =====
@@ -240,6 +243,7 @@ class KeywordNet(nn.Module):
         setfiles = list(set(files))
         setfiles.sort()
 
+        # import pdb; pdb.set_trace()
         ## Save all features to file
         for idx, file in enumerate(setfiles):
             inp1 = torch.FloatTensor(loadWAV(os.path.join(test_path,file))).cuda() #torch.Size([16000])
@@ -299,6 +303,129 @@ class KeywordNet(nn.Module):
         print('\n')
 
         return (all_scores, all_labels, all_trials);
+
+    ## ===== ===== ===== ===== ===== ===== ===== =====
+    ''' Evaluate accuracy from list '''
+    ## ===== ===== ===== ===== ===== ===== ===== =====
+    def evaluateAccuracyFromList(self, num_shots, enrollfilename, listfilename, print_interval=100, enroll_path='', test_path='', num_eval=10):
+        
+        self.eval();
+        target_keys = '__silence__, zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
+
+        lines       = []
+        files       = {}
+        test_feat_by_key = {}
+        tstart      = time.time()
+
+        feat_by_key = {}
+        enroll_files = {}
+        centroid_by_key = {}
+
+        with open(enrollfilename) as enrollfile:
+            while True:
+                line = enrollfile.readline();
+                if (not line):
+                    break;
+
+                data = line.split();
+
+                if len(data) != 2:
+                    sys.stderr.write("Too many or too little data in one line.")
+                    exit()
+
+                key = data[0]
+                filename = data[1]
+
+                if key in enroll_files:
+                    enroll_files[key].append(filename)
+                else:
+                    enroll_files[key] = [filename]
+
+        for key, audios in enroll_files.items():
+            feat_by_key[key] = []
+            for audio in audios:
+                inp = torch.FloatTensor(loadWAV(os.path.join(enroll_path, audio))).cuda()
+                with torch.no_grad():
+                    inp = self.mfcc(inp)
+                    inp = inp.transpose(0, 1).unsqueeze(0)
+                    feat = self.__S__.forward(inp).detach().cpu()
+                feat_by_key[key].append(feat)
+        feat_by_key['__silence__'] = []
+        for i in range(num_shots):
+            inp = torch.FloatTensor(loadSilence()).cuda()
+            with torch.no_grad():
+                inp = self.mfcc(inp)
+                inp = inp.transpose(0, 1).unsqueeze(0)
+                feat = self.__S__.forward(inp).detach().cpu()
+            feat_by_key['__silence__'].append(feat)
+
+        for key, feats in feat_by_key.items():
+            centroid_by_key[key] = torch.mean(torch.stack(feats), axis=0)
+
+
+        ## Read all lines
+        with open(listfilename) as listfile:
+            while True:
+                line = listfile.readline();
+                if (not line): 
+                    break;
+
+                data = line.split();
+
+                if len(data) != 2:
+                    sys.stderr.write("Too many data in one line")
+                    exit()
+
+                key = data[0]
+                filename = data[1]
+
+                if key in files:
+                    files[key].append(filename)
+                else:
+                    files[key] = [filename]
+
+        correct = 0
+        wrong   = 0
+
+        for key, audios in files.items():
+            test_feat_by_key[key] = []
+            for audio in audios:
+                inp = torch.FloatTensor(loadWAV(os.path.join(test_path, audio))).cuda()
+                with torch.no_grad():
+                    inp = self.mfcc(inp)
+                    inp = inp.transpose(0, 1).unsqueeze(0)
+                    feat = self.__S__.forward(inp).detach().cpu()
+                test_feat_by_key[key].append(feat)
+        test_feat_by_key['__silence__'] = []
+
+        for i in range(300) : # magic number!!-> going to modify
+            inp = torch.FloatTensor(loadSilence()).cuda()
+            with torch.no_grad():
+                inp = self.mfcc(inp)
+                inp = inp.transpose(0, 1).unsqueeze(0)
+                feat = self.__S__.forward(inp).detach().cpu()
+            test_feat_by_key['__silence__'].append(feat)
+
+        # preds = []
+        for key, feats in test_feat_by_key.items():
+            for feat in feats:
+                cos_sims = {}
+                for _key, centroids in centroid_by_key.items():
+                    cos_sims[_key] = F.cosine_similarity(feat.unsqueeze(-1), centroid_by_key[_key].unsqueeze(-1).transpose(0, 2))
+                pred = max(cos_sims, key=cos_sims.get)
+                # preds.append(pred)
+                if pred in target_keys and pred == key:
+                    correct += 1
+                elif pred not in target_keys and key not in target_keys:
+                    correct += 1
+                else:
+                    wrong += 1 
+
+        accuracy = correct / (correct + wrong)
+        accuracy = accuracy * 100
+        # import pdb; pdb.set_trace()
+
+        return accuracy; 
 
 
     ## ===== ===== ===== ===== ===== ===== ===== =====
