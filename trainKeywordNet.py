@@ -36,7 +36,7 @@ import zipfile
 import datetime
 from tuneThreshold import *
 from KeywordNet import KeywordNet
-from DatasetLoader_musan import get_data_loader
+from DatasetLoader import get_data_loader
 
 parser = argparse.ArgumentParser(description = "KeywordNet");
 
@@ -44,7 +44,7 @@ parser.add_argument('--config', type=str, default=None,  help='Config YAML file'
 
 ## Data loader
 parser.add_argument('--batch_size', type=int, default=1,  help='Batch size');
-parser.add_argument('--dict_size', type=int, default=320,  help='Dictionary size');
+parser.add_argument('--dict_size', type=int, default=256,  help='Dictionary size');
 parser.add_argument('--nDataLoaderThread', type=int, default=20, help='Number of loader threads');
 
 ## Training details
