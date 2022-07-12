@@ -43,7 +43,7 @@ import matplotlib.pyplot as plt
 
 class KeywordNet(nn.Module):
 
-    def __init__(self, model, optimizer, scheduler, trainfunc, mixedprec, n_mels, **kwargs):
+    def __init__(self, model, optimizer, scheduler, trainfunc, mixedprec, fine_tunning, n_mels, **kwargs):
         super(KeywordNet, self).__init__();
 
         KeywordNetModel = importlib.import_module('models.'+model).__getattribute__('MainModel')
@@ -76,14 +76,14 @@ class KeywordNet(nn.Module):
         ## ===== ===== ===== ===== ===== ===== ===== =====
         ''' Fine-tunning '''
         ## ===== ===== ===== ===== ===== ===== ===== =====
-        # if fine_tunning:
-        #     for name, param in self.__S__.named_parameters():
-        #         if name in ['conv0.weight', 'bn1.running_mean', 'bn1.running_var', 'bn1.num_batches_tracked', 'conv1.weight',
-        #                                     'bn2.running_mean', 'bn2.running_var', 'bn2.num_batches_tracked', 'conv2.weight',   
-        #                                     'bn3.running_mean', 'bn3.running_var', 'bn3.num_batches_tracked', 'conv3.weight']:
-        #         # if name in ['output.weight','output.bias']:
-        #             param.requires_grad = False
-        #     # Adding layers
+        if fine_tunning:
+            for name, param in self.__S__.named_parameters():
+                if name in ['conv0.weight', 'bn1.running_mean', 'bn1.running_var', 'bn1.num_batches_tracked', 'conv1.weight',
+                                            'bn2.running_mean', 'bn2.running_var', 'bn2.num_batches_tracked', 'conv2.weight',   
+                                            'bn3.running_mean', 'bn3.running_var', 'bn3.num_batches_tracked', 'conv3.weight']:
+                # if name in ['output.weight','output.bias']:
+                    param.requires_grad = False
+            # Adding layers
         #     self.__S__ = nn.Sequential(
         #         self.__S__,
         #         nn.Linear(1000,20).cuda()
@@ -307,12 +307,11 @@ class KeywordNet(nn.Module):
     ## ===== ===== ===== ===== ===== ===== ===== =====
     ''' Evaluate accuracy from list '''
     ## ===== ===== ===== ===== ===== ===== ===== =====
-    def evaluateAccuracyFromList(self, num_shots, enrollfilename, listfilename, print_interval=100, enroll_path='', test_path='', num_eval=10):
+    def evaluateAccuracyFromList(self, num_shots, enrollfilename, listfilename, print_interval=100, enroll_path='', test_path='', num_eval=10, noise_path=''):
         
         self.eval();
         target_keys = '__silence__, zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
 
-        lines       = []
         files       = {}
         test_feat_by_key = {}
         tstart      = time.time()
@@ -336,10 +335,16 @@ class KeywordNet(nn.Module):
                 key = data[0]
                 filename = data[1]
 
-                if key in enroll_files:
-                    enroll_files[key].append(filename)
+                if key in target_keys:
+                    if key in enroll_files:
+                        enroll_files[key].append(filename)
+                    else:
+                        enroll_files[key] = [filename]
                 else:
-                    enroll_files[key] = [filename]
+                    if '__unknown__' in enroll_files:
+                        enroll_files['__unknown__'].append(filename)
+                    else:
+                        enroll_files['__unknown__'] = [filename]
 
         for key, audios in enroll_files.items():
             feat_by_key[key] = []
@@ -350,9 +355,10 @@ class KeywordNet(nn.Module):
                     inp = inp.transpose(0, 1).unsqueeze(0)
                     feat = self.__S__.forward(inp).detach().cpu()
                 feat_by_key[key].append(feat)
+
         feat_by_key['__silence__'] = []
         for i in range(num_shots):
-            inp = torch.FloatTensor(loadSilence()).cuda()
+            inp = torch.FloatTensor(loadSilence(noise_path)).cuda()
             with torch.no_grad():
                 inp = self.mfcc(inp)
                 inp = inp.transpose(0, 1).unsqueeze(0)
@@ -379,13 +385,22 @@ class KeywordNet(nn.Module):
                 key = data[0]
                 filename = data[1]
 
-                if key in files:
-                    files[key].append(filename)
+                if key in target_keys:
+                    if key in files:
+                        files[key].append(filename)
+                    else:
+                        files[key] = [filename]
                 else:
-                    files[key] = [filename]
+                    if '__unknown__' in files:
+                        files['__unknown__'].append(filename)
+                    else:
+                        files['__unknown__'] = [filename]
 
         correct = 0
         wrong   = 0
+
+        TP = 0
+        FN = 0
 
         for key, audios in files.items():
             test_feat_by_key[key] = []
@@ -399,7 +414,7 @@ class KeywordNet(nn.Module):
         test_feat_by_key['__silence__'] = []
 
         for i in range(300) : # magic number!!-> going to modify
-            inp = torch.FloatTensor(loadSilence()).cuda()
+            inp = torch.FloatTensor(loadSilence(noise_path)).cuda()
             with torch.no_grad():
                 inp = self.mfcc(inp)
                 inp = inp.transpose(0, 1).unsqueeze(0)
@@ -413,19 +428,43 @@ class KeywordNet(nn.Module):
                 for _key, centroids in centroid_by_key.items():
                     cos_sims[_key] = F.cosine_similarity(feat.unsqueeze(-1), centroid_by_key[_key].unsqueeze(-1).transpose(0, 2))
                 pred = max(cos_sims, key=cos_sims.get)
-                # preds.append(pred)
-                if pred in target_keys and pred == key:
-                    correct += 1
-                elif pred not in target_keys and key not in target_keys:
+                # preds.append((pred, key))
+                if key == '__unknown__':
+                    if pred != key:
+                        FN += 1
+                elif key == '__silence__':
+                    if pred != key:
+                        FN += 1
+                else:
+                    if pred == key:
+                        TP += 1
+
+                if pred == key:
                     correct += 1
                 else:
-                    wrong += 1 
+                    wrong += 1
+                # if pred in target_keys and pred == key:
+                #     correct += 1
+                # elif pred not in target_keys and key not in target_keys:
+                #     correct += 1
+                # else:
+                #     wrong += 1 
 
-        accuracy = correct / (correct + wrong)
-        accuracy = accuracy * 100
+        # sum_unknown = 0
+        # for sample in preds:
+        #     if sample[0] == '__unknown__' and sample[1] == '__unknown__':
+        #         sum_unknown += 1
+
         # import pdb; pdb.set_trace()
 
-        return accuracy; 
+        # accuracy = correct / (correct + wrong)
+        # accuracy = accuracy * 100
+
+        accuracy_TF = TP / (TP + FN)
+        accuracy_TF = accuracy_TF * 100
+        # import pdb; pdb.set_trace()
+
+        return accuracy_TF; 
 
 
     ## ===== ===== ===== ===== ===== ===== ===== =====
@@ -517,6 +556,8 @@ class KeywordNet(nn.Module):
         
         input_feature = torch.stack(features, dim=0).squeeze(1)
 
+        # import pdb; pdb.set_trace()
+
         ## t-SNE
         tsne = TSNE(n_components=2, perplexity=30, n_iter=300)
         tsne_ref = tsne.fit_transform(input_feature)
@@ -527,6 +568,157 @@ class KeywordNet(nn.Module):
         df['Label'] = labels
 
         sns.lmplot(x="x", y="y", data=df, fit_reg=False, legend=True, size=20, hue='Label', scatter_kws={"s":200, "alpha":0.5})
+        plt.title('t-SNE result', weight='bold').set_fontsize('14')
+        plt.xlabel('x', weight='bold').set_fontsize('10')
+        plt.ylabel('y', weight='bold').set_fontsize('10')
+        plt.savefig(savename, bbox_inches='tight', pad_inches=1)
+
+    def tsne_drawer_acc(self, num_shots, enrollfilename, listfilename, savename, print_interval=100, enroll_path='', test_path='', num_eval=10, noise_path=''):
+        self.eval()
+        target_keys = '__silence__, zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
+
+        files       = {}
+        test_feat_by_key = {}
+        tstart      = time.time()
+
+        feat_by_key = {}
+        enroll_files = {}
+        centroid_by_key = {}
+
+        # with open(enrollfilename) as enrollfile:
+        #     while True:
+        #         line = enrollfile.readline();
+        #         if (not line):
+        #             break;
+
+        #         data = line.split();
+
+        #         if len(data) != 2:
+        #             sys.stderr.write("Too many or too little data in one line.")
+        #             exit()
+
+        #         key = data[0]
+        #         filename = data[1]
+
+        #         if key in target_keys:
+        #             if key in enroll_files:
+        #                 enroll_files[key].append(filename)
+        #             else:
+        #                 enroll_files[key] = [filename]
+        #         else:
+        #             if '__unknown__' in enroll_files:
+        #                 enroll_files['__unknown__'].append(filename)
+        #             else:
+        #                 enroll_files['__unknown__'] = [filename]
+
+        # for key, audios in enroll_files.items():
+        #     feat_by_key[key] = []
+        #     for audio in audios:
+        #         inp = torch.FloatTensor(loadWAV(os.path.join(enroll_path, audio))).cuda()
+        #         with torch.no_grad():
+        #             inp = self.mfcc(inp)
+        #             inp = inp.transpose(0, 1).unsqueeze(0)
+        #             feat = self.__S__.forward(inp).detach().cpu()
+        #         feat_by_key[key].append(feat)
+
+        # feat_by_key['__silence__'] = []
+        # for i in range(num_shots):
+        #     inp = torch.FloatTensor(loadSilence()).cuda()
+        #     with torch.no_grad():
+        #         inp = self.mfcc(inp)
+        #         inp = inp.transpose(0, 1).unsqueeze(0)
+        #         feat = self.__S__.forward(inp).detach().cpu()
+        #     feat_by_key['__silence__'].append(feat)
+
+        # for key, feats in feat_by_key.items():
+        #     centroid_by_key[key] = torch.mean(torch.stack(feats), axis=0)
+
+        # centroids = []
+        # cent_labels = []
+        # for key, feats in centroid_by_key.items():
+        #     centroids.extend(feats)
+        #     for i in range(len(feats)):
+        #         cent_labels.append(key)
+
+        # cent_feature = torch.stack(centroids, dim=0).squeeze(1)
+        # cent_labels = [item.replace("_", "") for item in cent_labels]
+
+        ## Read all lines
+        with open(listfilename) as listfile:
+            while True:
+                line = listfile.readline();
+                if (not line): 
+                    break;
+
+                data = line.split();
+
+                if len(data) != 2:
+                    sys.stderr.write("Too many data in one line")
+                    exit()
+
+                key = data[0]
+                filename = data[1]
+
+                if key in target_keys:
+                    if key in files:
+                        files[key].append(filename)
+                    else:
+                        files[key] = [filename]
+                else:
+                    if '__unknown__' in files:
+                        files['__unknown__'].append(filename)
+                    else:
+                        files['__unknown__'] = [filename]
+
+        for key, audios in files.items():
+            test_feat_by_key[key] = []
+            for audio in audios:
+                inp = torch.FloatTensor(loadWAV(os.path.join(test_path, audio))).cuda()
+                with torch.no_grad():
+                    inp = self.mfcc(inp)
+                    inp = inp.transpose(0, 1).unsqueeze(0)
+                    feat = self.__S__.forward(inp).detach().cpu()
+                test_feat_by_key[key].append(feat)
+            # import pdb; pdb.set_trace()
+        test_feat_by_key['__silence__'] = []
+
+        for i in range(300) : # magic number!!-> going to modify
+            inp = torch.FloatTensor(loadSilence(noise_path)).cuda()
+            with torch.no_grad():
+                inp = self.mfcc(inp)
+                inp = inp.transpose(0, 1).unsqueeze(0)
+                feat = self.__S__.forward(inp).detach().cpu()
+            test_feat_by_key['__silence__'].append(feat)
+
+        features = []
+        labels = []
+        for key, feats in test_feat_by_key.items():
+            features.extend(feats)
+            for i in range(len(feats)):
+                labels.append(key)
+
+        feature = torch.stack(features, dim=0).squeeze(1)
+        labels = [item.replace("_", "") for item in labels]
+
+        # import pdb; pdb.set_trace()
+
+        ## t-SNE
+        tsne = TSNE(n_components=2, perplexity=30, n_iter=300)
+        # tsne_ref = tsne.fit_transform(cent_feature)
+        tsne_feats = tsne.fit_transform(feature)
+
+        # df = pd.DataFrame(tsne_ref, index=tsne_ref[0:,1])
+        # df['x'] = tsne_ref[:,0]
+        # df['y'] = tsne_ref[:,1]
+        # df['Label'] = cent_labels
+
+        df2 = pd.DataFrame(tsne_feats, index=tsne_feats[0:,1])
+        df2['x'] = tsne_feats[:,0]
+        df2['y'] = tsne_feats[:,1]
+        df2['Label'] = labels
+
+        # sns.lmplot(x="x", y="y", data=df, fit_reg=False, legend=True, size=20, hue='Label', scatter_kws={"s":200, "alpha":0.5})
+        sns.lmplot(x="x", y="y", data=df2, fit_reg=False, legend=True, size=20, hue='Label', scatter_kws={"s":200, "alpha":0.5})
         plt.title('t-SNE result', weight='bold').set_fontsize('14')
         plt.xlabel('x', weight='bold').set_fontsize('10')
         plt.ylabel('y', weight='bold').set_fontsize('10')

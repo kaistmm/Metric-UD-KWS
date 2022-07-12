@@ -48,7 +48,7 @@ def worker_init_fn(worker_id):
     numpy.random.seed(numpy.random.get_state()[1][0] + worker_id)
 
 class wav_split(Dataset):
-    def __init__(self, dataset_file_name, train_path, dict_size, augment, fine_tunning, musan_path, rir_path, n_mels, alpha, input_length):
+    def __init__(self, dataset_file_name, train_path, dict_size, augment, fine_tunning, no_silence, musan_path, rir_path, n_mels, alpha, input_length):
         self.dataset_file_name = dataset_file_name;
 
         self.data_dict = {};
@@ -64,6 +64,7 @@ class wav_split(Dataset):
         self.rir_path   = rir_path
         self.augment    = augment
         self.fine_tunning = fine_tunning
+        self.no_silence = no_silence
         self.dict_size = dict_size
         self.alpha  = alpha
 
@@ -82,8 +83,8 @@ class wav_split(Dataset):
             else:
                 self.data_dict[keyword].append(filename)
 
-        # if self.fine_tunning:
-        self.data_dict['__silence__'] = []  
+        if not self.no_silence:
+            self.data_dict['__silence__'] = []  
 
     def __getitem__(self, index):
         audio_batch = []
@@ -294,10 +295,18 @@ def _timeshift_audio(self, data):
     data = np.pad(data, (a, b), "constant")
     return data[:len(data) - a] if a else data[b:]
 
-def loadSilence(max_audio=16000):
-    audio = numpy.zeros(max_audio)
 
-    return audio
+def loadSilence(noise_path, max_audio=16000):
+    ## randomly add noise offered by GSC
+    noise_files = glob.glob(os.path.join(noise_path, '*.wav'))
+    noise_file = random.choice(noise_files)
+    noise, _ = soundfile.read(noise_file)
+    # import pdb; pdb.set_trace()
+    # bg_noise = noise.squeeze(0)
+    noise_start = random.randint(0, len(noise) - max_audio - 1)
+    bg_noise = noise[noise_start : (noise_start + max_audio)]
+
+    return bg_noise
 
 def loadWAV(filename):             
     # Maximum audio length
@@ -333,9 +342,9 @@ def loadWAV(filename):
     return audio
 
 
-def get_data_loader(dataset_file_name, batch_size, dict_size, nDataLoaderThread, augment, fine_tunning, musan_path, rir_path, train_path, alpha, n_mels, input_length, **kwargs):
+def get_data_loader(dataset_file_name, batch_size, dict_size, nDataLoaderThread, augment, fine_tunning, no_silence, musan_path, rir_path, train_path, alpha, n_mels, input_length, **kwargs):
 
-    train_dataset = wav_split(dataset_file_name, train_path, dict_size, augment, fine_tunning, musan_path, rir_path, n_mels, alpha, input_length)
+    train_dataset = wav_split(dataset_file_name, train_path, dict_size, augment, fine_tunning, no_silence, musan_path, rir_path, n_mels, alpha, input_length)
 
     # train_dataset[1]
 

@@ -77,13 +77,14 @@ parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datase
 parser.add_argument('--augment',        type=bool,  default=False,  help='Augment input')
 parser.add_argument('--musan_path',     type=str,   default="/mnt/scratch/datasets/musan_split", help='Absolute path to the test set');
 parser.add_argument('--rir_path',       type=str,   default="/mnt/scratch/datasets/RIRS_NOISES/simulated_rirs", help='Absolute path to the test set');
+parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
 # parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/_background_noise_", help='Absolute path to the test set');
 
 #Google speech dataset
 parser.add_argument('--fine_train_list',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/fine_tune_list.txt",     help='Train list');
 parser.add_argument('--fine_train_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02", help='Absolute path to the train set');
-parser.add_argument('--fine_test_list',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01/test_list.txt",     help='Evaluation list');
-parser.add_argument('--fine_test_path',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.01", help='Absolute path to the test set');
+parser.add_argument('--fine_test_list',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/test_list.txt",     help='Evaluation list');
+parser.add_argument('--fine_test_path',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02", help='Absolute path to the test set');
 parser.add_argument('--test_acc_list',  type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/test_acc_list.txt", help='Evaluation Accuracy list')
 parser.add_argument('--test_acc_path',  type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02", help='Absolute path to the test accuracy set')
 
@@ -98,6 +99,7 @@ parser.add_argument('--eval_acc', dest='eval_acc', action='store_true', help='Ev
 
 ## For t-SNE
 parser.add_argument('--tsne', dest='tsne', action='store_true', help='t-SNE')
+parser.add_argument('--tsne_acc', dest='tsne_acc', action='store_true', help='t-SNE during evaluating accuracy')
 
 ## For fine-tunning, add layer, freezing
 parser.add_argument('--fine_tunning',        type=bool,  default=False,  help='Fine_tunning')
@@ -114,6 +116,9 @@ parser.add_argument('--seed',      type=int,  default=42,  help='seed number')
 ## Specific to environment removal
 parser.add_argument('--alpha', type=float, default=0, help='Alpha value for disentanglement');
 parser.add_argument('--env_iteration', type=int, default=5,  help='Iterations of environment phase');
+
+## Remove silence or not
+parser.add_argument('--no_silence', type=bool, default=False, help='If True, no silence during training')
 
 args = parser.parse_args();
 
@@ -185,7 +190,7 @@ for ii in range(0,it-1):
 #         nn.Linear(1000,26).cuda()
 #     )
 if args.eval_acc == True:
-    accuracy = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path)
+    accuracy = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
     print("Recognition accuracy : %.2f%%"%accuracy)
     quit()
 
@@ -230,6 +235,10 @@ if args.tsne == True:
 
     quit();
 
+if args.tsne_acc == True:
+    s.tsne_drawer_acc(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, savename=args.tsne_path, noise_path=args.noise_path)
+    quit();
+
 ############################################
 ''' Train & Validation code '''
 ############################################
@@ -256,6 +265,7 @@ if args.fine_tunning == True:
     args.test_list = args.fine_test_list
     args.test_path = args.fine_test_path
 
+print("Train list : %s"%args.train_list)
 trainLoader = get_data_loader(args.train_list, **vars(args));
 
 while(1):   
@@ -271,14 +281,14 @@ while(1):
     if it % args.test_interval == 0:
 
         print(time.strftime("%Y-%m-%d %H:%M:%S"), it, "Evaluating...");
-
         sc, lab, _ = s.evaluateFromList(args.test_list, print_interval=100, test_path=args.test_path)
         result = tuneThresholdfromScore(sc, lab, [1, 0.1]);
 
         print(args.save_path)
         print(time.strftime("%Y-%m-%d %H:%M:%S"), "LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f"%( max(clr), traineer, loss, result[1]));
         scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f\n"%(it, max(clr), traineer, loss, result[1]));
-
+        accuracy = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
+        print("Recognition accuracy : %.2f%%"%accuracy)
         scorefile.flush()
 
         s.saveParameters(model_save_path+"/model%04d.model"%it);
