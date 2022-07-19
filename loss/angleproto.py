@@ -37,8 +37,11 @@ class LossFunction(nn.Module):
         self.test_normalize = True
         self.fine_tunning = fine_tunning
 
+        self.nOut = kwargs['nOut']
+        self.nClasses = kwargs['nClasses']
+
         if self.fine_tunning == True:
-            self.fc = nn.Linear(nOut, nClasses)
+            self.fc = nn.Linear(self.nOut, self.nClasses)
         
         self.w = nn.Parameter(torch.tensor(init_w))
         self.b = nn.Parameter(torch.tensor(init_b))
