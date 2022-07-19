@@ -24,9 +24,9 @@ THE SOFTWARE.
 
 import torch
 
-def Scheduler(optimizer, test_interval, max_epoch, lr_decay, **kwargs):
+def Scheduler(optimizer, lr_step_size, max_epoch, lr_decay, **kwargs):
 
-	sche_fn = torch.optim.lr_scheduler.StepLR(optimizer, step_size=test_interval, gamma=lr_decay)
+	sche_fn = torch.optim.lr_scheduler.StepLR(optimizer, step_size=lr_step_size, gamma=lr_decay)
 
 	lr_step = 'epoch'
 

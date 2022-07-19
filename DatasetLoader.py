@@ -84,7 +84,13 @@ class wav_split(Dataset):
                 self.data_dict[keyword].append(filename)
 
         if not self.no_silence:
-            self.data_dict['__silence__'] = []  
+            self.data_dict['__silence__'] = [] 
+
+        self.label_to_idx = {}
+        label_set = self.data_dict.keys()
+
+        for idx, key in enumerate(label_set):
+            self.label_to_idx[key] = idx
 
     def __getitem__(self, index):
         audio_batch = []
@@ -109,7 +115,9 @@ class wav_split(Dataset):
 
         # audio_aug_batch = torch.stack(audio_augs, dim=0)
         audio_aug_batch = numpy.stack(audio_augs, axis=0)
-        return torch.FloatTensor(audio_aug_batch) #audio_aug_batch.shape = (20, 2, 16000)
+
+        label = numpy.stack([self.label_to_idx[s] for s in selected_dict], axis=0)
+        return torch.FloatTensor(audio_aug_batch), torch.LongTensor(label)  #audio_aug_batch.shape = (20, 2, 16000)
 
     def __len__(self):
         return len(self.lines)//len(self.data_dict)
@@ -305,6 +313,9 @@ def loadSilence(noise_path, max_audio=16000):
     # bg_noise = noise.squeeze(0)
     noise_start = random.randint(0, len(noise) - max_audio - 1)
     bg_noise = noise[noise_start : (noise_start + max_audio)]
+
+    a = random.random() * 0.1
+    bg_noise = bg_noise * a
 
     return bg_noise
 

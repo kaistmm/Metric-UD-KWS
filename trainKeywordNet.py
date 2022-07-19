@@ -37,6 +37,7 @@ import datetime
 from tuneThreshold import *
 from KeywordNet import KeywordNet
 from DatasetLoader import get_data_loader
+from DatasetLoader_classify import get_data_loader_classify
 
 parser = argparse.ArgumentParser(description = "KeywordNet");
 
@@ -52,6 +53,8 @@ parser.add_argument('--test_interval', type=int, default=1, help='Test and save 
 parser.add_argument('--max_epoch',      type=int, default=150, help='Maximum number of epochs');
 parser.add_argument('--trainfunc', type=str, default="angleproto",    help='Loss function');
 parser.add_argument('--mixedprec',      dest='mixedprec', type=bool,  default=False, help='Enable mixed precision training');
+parser.add_argument('--use_prototype', type=bool, default=False, help='Enable protytype for calculating angularprotytpe loss');
+parser.add_argument('--Q_size',  type =int, default=10, help='Queue size')
 
 ## Optimizer
 parser.add_argument('--optimizer',      type=str,   default="adam", help='sgd or adam');
@@ -61,6 +64,7 @@ parser.add_argument('--scheduler',      type=str,   default="steplr", help='Lear
 parser.add_argument('--lr', type=float, default=0.001,      help='Learning rate');
 parser.add_argument("--lr_decay", type=float, default=0.95, help='Learning rate decay every [test_interval] epochs');
 parser.add_argument('--weight_decay',   type=float, default=0,      help='Weight decay in the optimizer');
+parser.add_argument('--lr_step_size', type=float, default=5, help='Learning rate decaying step')
 
 ## Load and save
 parser.add_argument('--initial_model',  type=str, default="", help='Initial model weights');
@@ -90,9 +94,11 @@ parser.add_argument('--test_acc_path',  type=str,   default="/mnt/scratch/datase
 
 ## Model definition
 parser.add_argument('--n_mels',         type=int,   default=40,     help='Number of mel filterbanks');
+parser.add_argument('--n_maps',         type=int,   default=45,     help='Number of featuer maps');
 parser.add_argument('--model',          type=str,   default="ResNet15",     help='Name of model definition');
-parser.add_argument('--nOut',           type=int,   default=1000,    help='Embedding size in the last FC layer (the number of classes at training');
-
+parser.add_argument('--nOut',           type=int,   default=1001,    help='Embedding size in the last FC layer (the number of classes at training');
+parser.add_argument('--nClasses',       type=int,   default=1001,    help='Number of classes to be classified')
+parser.add_argument('--del_ratio',      type=float, default=0.0)
 ## For test only
 parser.add_argument('--eval', dest='eval', action='store_true', help='Eval only')
 parser.add_argument('--eval_acc', dest='eval_acc', action='store_true', help='Eval w/ accuracy')
@@ -103,6 +109,7 @@ parser.add_argument('--tsne_acc', dest='tsne_acc', action='store_true', help='t-
 
 ## For fine-tunning, add layer, freezing
 parser.add_argument('--fine_tunning',        type=bool,  default=False,  help='Fine_tunning')
+parser.add_argument('--sample_per_class',      type=int,   default=300,    help='Number of samples per class')
 
 ## For enrollment
 parser.add_argument('--enroll_list',    type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/enroll_list.txt", help='enroll list')
@@ -174,21 +181,6 @@ elif(args.initial_model != ""):
 for ii in range(0,it-1):
     s.__scheduler__.step()
 
-## ===== ===== ===== ===== ===== ===== ===== =====
-''' Fine-tunning '''
-## ===== ===== ===== ===== ===== ===== ===== =====  
-# if args.fine_tunning:
-#     for name, param in s.__S__.named_parameters():
-#         if name in ['conv0.weight', 'bn1.running_mean', 'bn1.running_var', 'bn1.num_batches_tracked', 'conv1.weight',
-#                                     'bn2.running_mean', 'bn2.running_var', 'bn2.num_batches_tracked', 'conv2.weight',   
-#                                     'bn3.running_mean', 'bn3.running_var', 'bn3.num_batches_tracked', 'conv3.weight']:
-#         # if name in ['output.weight','output.bias']:
-#             param.requires_grad = False
-#     # Adding layers
-#     s.__S__ = nn.Sequential(
-#         s.__S__,
-#         nn.Linear(1000,26).cuda()
-#     )
 if args.eval_acc == True:
     accuracy = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
     print("Recognition accuracy : %.2f%%"%accuracy)
@@ -266,7 +258,11 @@ if args.fine_tunning == True:
     args.test_path = args.fine_test_path
 
 print("Train list : %s"%args.train_list)
-trainLoader = get_data_loader(args.train_list, **vars(args));
+
+if args.trainfunc == 'softmax' or args.trainfunc == 'amsoftmax':
+    trainLoader = get_data_loader_classify(args.train_list, **vars(args));
+else:
+    trainLoader = get_data_loader(args.train_list, **vars(args));
 
 while(1):   
 
@@ -275,7 +271,10 @@ while(1):
     print(time.strftime("%Y-%m-%d %H:%M:%S"), it, "Training %s with LR %f..."%(args.model,max(clr)));
 
     ## Train network
-    loss, traineer = s.train_network(loader=trainLoader, alpha=args.alpha, num_steps=args.env_iteration);
+    if args.trainfunc == 'softmax' or args.trainfunc == 'amsoftmax':
+        loss, traineer = s.train_network_classify(loader=trainLoader)
+    else:
+        loss, traineer = s.train_network(epoch=it, loader=trainLoader, alpha=args.alpha, num_steps=args.env_iteration);
 
     ## Validate and save
     if it % args.test_interval == 0:
@@ -286,9 +285,12 @@ while(1):
 
         print(args.save_path)
         print(time.strftime("%Y-%m-%d %H:%M:%S"), "LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f"%( max(clr), traineer, loss, result[1]));
-        scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f\n"%(it, max(clr), traineer, loss, result[1]));
-        accuracy = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
-        print("Recognition accuracy : %.2f%%"%accuracy)
+        if args.fine_tunning == True:
+            accuracy = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
+            print("Recognition accuracy : %.2f%%"%accuracy)
+            scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f, Accuracy %.2f\n"%(it, max(clr), traineer, loss, result[1], accuracy));
+        else:
+            scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f\n"%(it, max(clr), traineer, loss, result[1]));
         scorefile.flush()
 
         s.saveParameters(model_save_path+"/model%04d.model"%it);

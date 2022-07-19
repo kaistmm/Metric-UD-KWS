@@ -31,10 +31,14 @@ from accuracy import accuracy
 
 class LossFunction(nn.Module):
 
-    def __init__(self, init_w=10.0, init_b=-5.0, **kwargs):
+    def __init__(self, fine_tunning, init_w=10.0, init_b=-5.0, **kwargs):
         super(LossFunction, self).__init__()
 
         self.test_normalize = True
+        self.fine_tunning = fine_tunning
+
+        if self.fine_tunning == True:
+            self.fc = nn.Linear(nOut, nClasses)
         
         self.w = nn.Parameter(torch.tensor(init_w))
         self.b = nn.Parameter(torch.tensor(init_b))
@@ -44,6 +48,9 @@ class LossFunction(nn.Module):
 
     def forward(self, x, label=None): #x.shape = torch.Size([20, 2, 12])
         assert x.size()[1] >= 2
+
+        if self.fine_tunning = True:
+            x = self.fc(x)
 
         out_anchor      = torch.mean(x[:,1:,:],1) # out_anchor = torch.Size([20, 20])  #왜 mean을 쓴거지?
         out_positive    = x[:,0,:] #out_postive = torch.Size([20, 20])

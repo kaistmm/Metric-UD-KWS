@@ -8,9 +8,11 @@
 *.eer
 *.cmd
 *.zip
+*.png
 setup.py
 tests/
 exps/
+data/
 
 # Accepted text files
 !requirements.txt

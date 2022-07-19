@@ -46,13 +46,14 @@ class KeywordNet(nn.Module):
     def __init__(self, model, optimizer, scheduler, trainfunc, mixedprec, fine_tunning, n_mels, **kwargs):
         super(KeywordNet, self).__init__();
 
+        self.trainfunc = trainfunc
         KeywordNetModel = importlib.import_module('models.'+model).__getattribute__('MainModel')
         self.__S__ = KeywordNetModel(**kwargs).cuda();
         ## For fine-tunning t-SNE
         # self.__S__.fc = nn.Linear(1000,20)
 
         LossFunction = importlib.import_module('loss.'+trainfunc).__getattribute__('LossFunction')
-        self.__L__ = LossFunction(**kwargs).cuda();
+        self.__L__ = LossFunction(fine_tunning, **kwargs).cuda();
 
         self.__S2E__ = ConfModelBC(num_layers=1, **kwargs).cuda();
 
@@ -93,7 +94,7 @@ class KeywordNet(nn.Module):
     ''' Train network '''
     ## ===== ===== ===== ===== ===== ===== ===== =====
 
-    def train_network(self, loader, alpha=1, num_steps=1):
+    def train_network(self, epoch, loader, alpha=1, num_steps=1):
 
         self.train();
 
@@ -109,7 +110,7 @@ class KeywordNet(nn.Module):
 
         tstart = time.time()
         
-        for data in loader: #data = torch.Size([N,20,2,16000])
+        for data, labels in loader: #data = torch.Size([N,20,2,16000])
 
             self.zero_grad();
 
@@ -118,8 +119,8 @@ class KeywordNet(nn.Module):
 
             data = data.cuda()
             data = data.to(torch.float32)
-            data = data.transpose(0,1) #torch.Size([2,N*20,16000])
-            data = self.mfcc(data).transpose(2,3) #torch.Size([2,N*20,40,101])->[2,N*20,101,40]
+            data = data.transpose(0,1) # torch.Size([2,N*20,16000])
+            data = self.mfcc(data).transpose(2,3) # torch.Size([2,N*20,40,101])->[2,N*20,101,40]
 
             feat = []
             for inp in data:  #inp.shape = [N*20,101,40]
@@ -129,56 +130,23 @@ class KeywordNet(nn.Module):
                 feat.append(outp) #feat[1].shape = torch.Size([N*20, 20]) = outp
 
             feat = torch.stack(feat, dim=1).squeeze() #feat.shape = torch.Size([N*20, 2, 20])
-
-            ''' Remove channel '''
-
-            if alpha > 0:
-                out_a_ = feat[:,0,:].detach()
-                out_s_ = feat[:,1,:].detach()
-                out_p_ = feat[:,2,:].detach()
-
-                # # ==================== TRAIN DISCRIMINATOR ====================
-
-                for ii in range(0,num_steps):
-
-                    conf_input = torch.cat((torch.cat((out_a_,out_s_),1),torch.cat((out_a_,out_p_),1)),0)
-
-                    conf_output = self.__S2E__(conf_input)
-
-                    dloss1  = criterion(conf_output, conf_labels)
-
-                    dloss1.backward();
-                    self.__optimizerS2E__.step();
-                    self.__optimizerS2E__.zero_grad();
-
-                    # print(dloss1)
-
-                # # ==================== TRAIN NORMAL AND BACKPROP THROUGH DISCRIMINATOR ====================
-
-                conf_input = torch.cat((torch.cat((feat[:,0,:],feat[:,1,:]),1),torch.cat((feat[:,0,:],feat[:,2,:]),1)),0)
-
-                conf_output = self.__S2E__(conf_input)
-
-                conf_loss   = criterion(conf_output, conf_labels)
-
-                nloss, prec1 = self.__L__.forward(feat[:,[0,2],:],None)
-
-                nloss += conf_loss * alpha
             
-            else:
-                conf_loss   = 0
-                feat = feat.view(batchsize, minibatchsize, num_wav, -1) #feat.shape = torch.Size([N, 20, 2, 20])
-                
-                batchloss = []
-                batchprec = []
+            conf_loss   = 0
+            feat = feat.view(batchsize, minibatchsize, num_wav, -1) #feat.shape = torch.Size([N, 20, 2, 20])
+            
+            batchloss = []
+            batchprec = []
 
-                with autocast(enabled = self.mixedprec):
-                    for _, one_feat in enumerate(feat):
-                        _nloss, _prec1 = self.__L__.forward(one_feat,None)
-                        batchloss.append(_nloss)
-                        batchprec.append(_prec1)
-                    nloss = torch.mean(torch.stack(batchloss))
-                    prec1 = torch.mean(torch.stack(batchprec))
+            with autocast(enabled = self.mixedprec):
+                for _, one_feat in enumerate(feat):
+                    if self.trainfunc == 'angleproto_mean':
+                        _nloss, _prec1 = self.__L__.forward(one_feat,epoch,labels)
+                    else:
+                        _nloss, _prec1 = self.__L__.forward(one_feat)
+                    batchloss.append(_nloss)
+                    batchprec.append(_prec1)
+                nloss = torch.mean(torch.stack(batchloss))
+                prec1 = torch.mean(torch.stack(batchprec))
 
             loss    += nloss.detach().cpu();
             top1    += prec1
@@ -210,6 +178,67 @@ class KeywordNet(nn.Module):
         sys.stdout.write("\n");
         
         return (loss/counter, top1/counter);
+
+    ## ===== ===== ===== ===== ===== ===== ===== =====
+    ''' Fine-tune network '''
+    ## ===== ===== ===== ===== ===== ===== ===== =====
+
+    def train_network_classify(self, loader):
+        self.train()
+
+        stepsize = loader.batch_size
+
+        counter = 0
+        index = 0
+        loss = 0
+        top1 = 0
+        # EER or accuracy
+
+        tstart = time.time()
+
+        for data, data_label in loader:
+
+            # data = data.transpose(1, 0).cuda()
+            data = data.cuda()
+            data = self.mfcc(data).transpose(1, 2)
+
+            # import pdb; pdb.set_trace()
+
+            self.zero_grad()
+
+            data = self.__S__.forward(data)
+            label = torch.LongTensor(data_label).cuda()
+
+            if self.mixedprec:
+                with autocast():
+                    nloss, prec1 = self.__L__.forward(data, label)
+                self.scaler.scale(nloss).backward()
+                self.scaler.step(self.__optimizer__)
+                self.scaler.update()
+            else:
+                nloss, prec1 = self.__L__.forward(data, label)
+                nloss.backward()
+                self.__optimizer__.step()
+
+            loss += nloss.detach().cpu().item()
+            top1 += prec1.detach().cpu().item()
+            counter += 1
+            index += stepsize
+
+            telapsed = time.time() - tstart
+            tstart = time.time()
+
+            sys.stdout.write("\rProcessing {:d} of {:d}:".format(index, loader.__len__() * loader.batch_size))
+            sys.stdout.write("Loss {:f} TEER/TAcc {:2.3f}% - {:.2f} Hz ".format(loss / counter, top1 / counter, stepsize / telapsed))
+            sys.stdout.flush()
+
+            if self.lr_step == "iteration":
+                self.__scheduler__.step()
+
+        if self.lr_step == "epoch":
+            self.__scheduler__.step()
+
+        return (loss / counter, top1 / counter)
 
     ## ===== ===== ===== ===== ===== ===== ===== =====
     ''' Evaluate from list '''
@@ -327,7 +356,6 @@ class KeywordNet(nn.Module):
                     break;
 
                 data = line.split();
-
                 if len(data) != 2:
                     sys.stderr.write("Too many or too little data in one line.")
                     exit()
@@ -348,6 +376,7 @@ class KeywordNet(nn.Module):
 
         for key, audios in enroll_files.items():
             feat_by_key[key] = []
+
             for audio in audios:
                 inp = torch.FloatTensor(loadWAV(os.path.join(enroll_path, audio))).cuda()
                 with torch.no_grad():
@@ -395,12 +424,8 @@ class KeywordNet(nn.Module):
                         files['__unknown__'].append(filename)
                     else:
                         files['__unknown__'] = [filename]
-
+        wrong = 0
         correct = 0
-        wrong   = 0
-
-        TP = 0
-        FN = 0
 
         for key, audios in files.items():
             test_feat_by_key[key] = []
@@ -421,55 +446,25 @@ class KeywordNet(nn.Module):
                 feat = self.__S__.forward(inp).detach().cpu()
             test_feat_by_key['__silence__'].append(feat)
 
-        # preds = []
         for key, feats in test_feat_by_key.items():
             for feat in feats:
                 cos_sims = {}
                 for _key, centroids in centroid_by_key.items():
+                    if True:
+                        feat = F.normalize(feat, dim=1)
+                        centroid_by_key[_key] = F.normalize(centroid_by_key[_key], dim=1)
                     cos_sims[_key] = F.cosine_similarity(feat.unsqueeze(-1), centroid_by_key[_key].unsqueeze(-1).transpose(0, 2))
+
                 pred = max(cos_sims, key=cos_sims.get)
-                # preds.append((pred, key))
-                if key == '__unknown__':
-                    if pred != key:
-                        FN += 1
-                elif key == '__silence__':
-                    if pred != key:
-                        FN += 1
-                else:
-                    if pred == key:
-                        TP += 1
-
-                if pred == key:
-                    correct += 1
-                else:
+                if pred != key:
                     wrong += 1
-                # if pred in target_keys and pred == key:
-                #     correct += 1
-                # elif pred not in target_keys and key not in target_keys:
-                #     correct += 1
-                # else:
-                #     wrong += 1 
+                else:
+                    correct += 1
 
-        # sum_unknown = 0
-        # for sample in preds:
-        #     if sample[0] == '__unknown__' and sample[1] == '__unknown__':
-        #         sum_unknown += 1
+        accuracy = correct / (correct + wrong)
+        accuracy = accuracy * 100
 
-        # import pdb; pdb.set_trace()
-
-        # accuracy = correct / (correct + wrong)
-        # accuracy = accuracy * 100
-
-        accuracy_TF = TP / (TP + FN)
-        accuracy_TF = accuracy_TF * 100
-        # import pdb; pdb.set_trace()
-
-        return accuracy_TF; 
-
-
-    ## ===== ===== ===== ===== ===== ===== ===== =====
-    ''' Save parameters '''
-    ## ===== ===== ===== ===== ===== ===== ===== =====
+        return accuracy; 
 
     def saveParameters(self, path):
         
@@ -555,6 +550,9 @@ class KeywordNet(nn.Module):
                 sys.stdout.write("\rReading %d of %d: %.2f Hz, embedding size %d"%(idx,len(setfiles),idx/telapsed,ref_feat.size()[1]));
         
         input_feature = torch.stack(features, dim=0).squeeze(1)
+
+        if True:
+            input_feature = F.normalize(input_feature, dim=1)
 
         # import pdb; pdb.set_trace()
 
@@ -698,6 +696,9 @@ class KeywordNet(nn.Module):
                 labels.append(key)
 
         feature = torch.stack(features, dim=0).squeeze(1)
+        if False:
+            feature = F.normalize(feature, dim=1)
+        # import pdb; pdb.set_trace()
         labels = [item.replace("_", "") for item in labels]
 
         # import pdb; pdb.set_trace()
@@ -718,7 +719,7 @@ class KeywordNet(nn.Module):
         df2['Label'] = labels
 
         # sns.lmplot(x="x", y="y", data=df, fit_reg=False, legend=True, size=20, hue='Label', scatter_kws={"s":200, "alpha":0.5})
-        sns.lmplot(x="x", y="y", data=df2, fit_reg=False, legend=True, size=20, hue='Label', scatter_kws={"s":200, "alpha":0.5})
+        sns.lmplot(x="x", y="y", data=df2, fit_reg=False, legend=True, size=20, hue='Label', scatter_kws={"s":100, "alpha":1})
         plt.title('t-SNE result', weight='bold').set_fontsize('14')
         plt.xlabel('x', weight='bold').set_fontsize('10')
         plt.ylabel('y', weight='bold').set_fontsize('10')

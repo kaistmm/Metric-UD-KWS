@@ -37,13 +37,12 @@ from utils import PreEmphasis
 import pdb
 
 class ResNet15(nn.Module):
-    def __init__(self, nOut, **kwargs):
+    def __init__(self, nOut, del_ratio, n_maps, **kwargs):
         super(ResNet15, self).__init__()
 
         n_labels = nOut
-        n_maps = 45 #차원 수
+        self.n_maps = n_maps #차원 수
         dilation = True # config["use_dilation"]
-
         self.conv0 = nn.Conv2d(1, n_maps, (3,3), padding=(1,1), bias=False)
         self.n_layers = 13 # 2x6(res) + 1(conv)
 
@@ -59,11 +58,27 @@ class ResNet15(nn.Module):
             self.add_module("conv{}".format(i + 1), conv)
 
         self.output = nn.Linear(n_maps, n_labels)
+        self.del_ratio = del_ratio
 
     def forward(self, x): #torch.Size([200, 201 , 40])
 
-        x = x.unsqueeze(1) #배치 차원 추가 torch.Size([200, 1, 201, 40])
+        B, T, Fr = x.shape
+
+        if self.training:
+            with torch.no_grad():
+                Tmask = torch.rand(T) < self.del_ratio
+                Tmask = Tmask.unsqueeze(dim=0).unsqueeze(dim=-1)
+                Tmask = Tmask.repeat(B, 1, Fr)
+                Fmask = torch.rand(Fr) < self.del_ratio
+                Fmask = Fmask.unsqueeze(dim=0).unsqueeze(dim=0)
+                Fmask = Fmask.repeat(B, T, 1)
+
+                TFmask = torch.logical_or(Tmask, Fmask)
+                x[TFmask] = 1e-8
+
+        x = x.unsqueeze(1).clone() #배치 차원 추가 torch.Size([200, 1, 201, 40])
         
+
         for i in range(self.n_layers + 1):
             y = F.relu(getattr(self, "conv{}".format(i))(x)) #속성 가져오기
             if i == 0:
@@ -77,6 +92,8 @@ class ResNet15(nn.Module):
                 x = y
             if i > 0:
                 x = getattr(self, "bn{}".format(i))(x)
+                
+        
         x = x.view(x.size(0), x.size(1), -1) # shape: (batch, feats, o3)
         x = torch.mean(x, 2) #torch.Size([200, 45])
 

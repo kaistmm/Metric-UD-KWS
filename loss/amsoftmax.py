@@ -27,10 +27,14 @@ import time, pdb, numpy
 from utils import accuracy
 
 class LossFunction(nn.Module):
-    def __init__(self, nOut, nClasses=26, margin=0.3, scale=15, **kwargs):
+    def __init__(self, fine_tunning, nOut, nClasses=26, margin=0.3, scale=15, **kwargs):
         super(LossFunction, self).__init__()
 
         self.test_normalize = True
+        self.fine_tunning = fine_tunning
+
+        if self.fine_tunning == True:
+            self.fc = nn.Linear(nOut, nClasses)
         
         self.m = margin
         self.s = scale
@@ -45,6 +49,9 @@ class LossFunction(nn.Module):
 
         assert x.size()[0] == label.size()[0]
         assert x.size()[1] == self.in_feats
+
+        if self.fine_tunning == True:
+            x = self.fc(x)
 
         x_norm = torch.norm(x, p=2, dim=1, keepdim=True).clamp(min=1e-12)
         x_norm = torch.div(x, x_norm)
