@@ -18,9 +18,6 @@ class LossFunction(nn.Module):
 	    if self.fine_tunning == True:
 	    	self.fc 		= nn.Linear(nOut,nClasses) # (nmaps, classes)
 
-	    self.n_maps = n_maps
-	    self.nClasses = nClasses
-
 	    print('Initialised Softmax Loss')
 
 	def forward(self, x, label=None):

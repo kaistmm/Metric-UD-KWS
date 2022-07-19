@@ -49,7 +49,7 @@ class LossFunction(nn.Module):
     def forward(self, x, label=None): #x.shape = torch.Size([20, 2, 12])
         assert x.size()[1] >= 2
 
-        if self.fine_tunning = True:
+        if self.fine_tunning == True:
             x = self.fc(x)
 
         out_anchor      = torch.mean(x[:,1:,:],1) # out_anchor = torch.Size([20, 20])  #왜 mean을 쓴거지?
