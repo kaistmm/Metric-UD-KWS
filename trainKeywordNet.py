@@ -99,6 +99,9 @@ parser.add_argument('--model',          type=str,   default="ResNet15",     help
 parser.add_argument('--nOut',           type=int,   default=1001,    help='Embedding size in the last FC layer (the number of classes at training');
 parser.add_argument('--nClasses',       type=int,   default=1001,    help='Number of classes to be classified')
 parser.add_argument('--del_ratio',      type=float, default=0.0)
+parser.add_argument("--hard_prob",      type=float, default=0.5,    help='Hard negative mining probability, otherwise random, only for some loss functions')
+parser.add_argument("--hard_rank",      type=int,   default=10,     help='Hard negative mining rank in the batch, only for some loss functions')
+
 ## For test only
 parser.add_argument('--eval', dest='eval', action='store_true', help='Eval only')
 parser.add_argument('--eval_acc', dest='eval_acc', action='store_true', help='Eval w/ accuracy')
@@ -271,6 +274,7 @@ while(1):
     print(time.strftime("%Y-%m-%d %H:%M:%S"), it, "Training %s with LR %f..."%(args.model,max(clr)));
 
     ## Train network
+    trainLoader.dataset.shuffle_dict()
     if args.trainfunc == 'softmax' or args.trainfunc == 'amsoftmax':
         loss, traineer = s.train_network_classify(loader=trainLoader)
     else:

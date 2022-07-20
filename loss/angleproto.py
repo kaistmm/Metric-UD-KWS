@@ -40,8 +40,8 @@ class LossFunction(nn.Module):
         self.nOut = kwargs['nOut']
         self.nClasses = kwargs['nClasses']
 
-        if self.fine_tunning == True:
-            self.fc = nn.Linear(self.nOut, self.nClasses)
+        # if self.fine_tunning == True:
+        #     self.fc = nn.Linear(self.nOut, self.nClasses)
         
         self.w = nn.Parameter(torch.tensor(init_w))
         self.b = nn.Parameter(torch.tensor(init_b))
@@ -52,8 +52,8 @@ class LossFunction(nn.Module):
     def forward(self, x, label=None): #x.shape = torch.Size([20, 2, 12])
         assert x.size()[1] >= 2
 
-        if self.fine_tunning == True:
-            x = self.fc(x)
+        # if self.fine_tunning == True:
+        #     x = self.fc(x)
 
         out_anchor      = torch.mean(x[:,1:,:],1) # out_anchor = torch.Size([20, 20])  #왜 mean을 쓴거지?
         out_positive    = x[:,0,:] #out_postive = torch.Size([20, 20])

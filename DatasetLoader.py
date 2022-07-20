@@ -72,12 +72,10 @@ class wav_split(Dataset):
         with open(dataset_file_name) as f:
             self.lines = f.readlines()
             
-        for line in self.lines: 
+        for line in self.lines:
+            keyword, filename = line.split();
+            filename = os.path.join(train_path, filename);
 
-            data = line.split();                            #on on/8911b8d2_nohash_0.wav
-            filename = os.path.join(train_path,data[1]);    #'/mnt/scratch/datasets/speech_commands_v0.01/on/8911b8d2_nohash_0.wav'
-            keyword = data[0]            
-                               #'on'
             if keyword not in self.data_dict:
                 self.data_dict[keyword] = [filename]        #{'HOWS': ["/mnt/scratch/datasets/words_filtered/HOWS/HOW'S_8023-286253-0007_19.wav"]}
             else:
@@ -92,14 +90,21 @@ class wav_split(Dataset):
         for idx, key in enumerate(label_set):
             self.label_to_idx[key] = idx
 
+        self.sampled_data = None
+        self.shuffle_dict()
+        assert self.sampled_data is not None
+
+
     def __getitem__(self, index):
         audio_batch = []
-        selected_dict = random.sample(list(self.data_dict.keys()), self.dict_size) #len(self.data_dict.keys()) = 1000 : HAD , YOU ...
-        for keyword in selected_dict:                                   #len(selected_dict) = 160
+
+        keywords, indexes = self.sampled_data[index]
+
+        for keyword, idx in zip(keywords, indexes):
             if keyword == '__silence__':
                 audio = load_silence()
             else:
-                audio = load_wav(self.data_dict[keyword], index)#(2, 16000) #len(self.data_dict[keyword]) = 1000
+                audio = load_wav(self.data_dict[keyword], idx)#(2, 16000) #len(self.data_dict[keyword]) = 1000
             audio_batch.append(audio)
 
         ## Noise augmentation
@@ -116,11 +121,20 @@ class wav_split(Dataset):
         # audio_aug_batch = torch.stack(audio_augs, dim=0)
         audio_aug_batch = numpy.stack(audio_augs, axis=0)
 
-        label = numpy.stack([self.label_to_idx[s] for s in selected_dict], axis=0)
-        return torch.FloatTensor(audio_aug_batch), torch.LongTensor(label)  #audio_aug_batch.shape = (20, 2, 16000)
+        label = numpy.stack([self.label_to_idx[k] for k in keywords], axis=0)
+
+        return torch.FloatTensor(audio_aug_batch), torch.LongTensor(label)
 
     def __len__(self):
-        return len(self.lines)//len(self.data_dict)
+        return len(self.lines)//self.dict_size
+
+    def shuffle_dict(self):
+        self.sampled_data = []
+        for _ in range(self.__len__()):
+            selected_dict = random.sample(list(self.data_dict.keys()), self.dict_size)
+            selected_index = random.sample(list(range(len(self.lines)//(len(self.data_dict)-1))), self.dict_size)
+            self.sampled_data.append((selected_dict, selected_index))
+
 
     def augment_wav(self,audio):
 
@@ -362,7 +376,7 @@ def get_data_loader(dataset_file_name, batch_size, dict_size, nDataLoaderThread,
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=batch_size,
-        shuffle=False,
+        shuffle=True,
         num_workers=nDataLoaderThread,
         pin_memory=False,
         drop_last=True,

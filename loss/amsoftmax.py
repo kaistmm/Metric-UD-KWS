@@ -39,7 +39,10 @@ class LossFunction(nn.Module):
         self.m = margin
         self.s = scale
         self.in_feats = nOut
-        self.W = torch.nn.Parameter(torch.randn(nOut, nClasses), requires_grad=True)
+        if self.fine_tunning == True:
+            self.W = torch.nn.Parameter(torch.randn(nClasses, nClasses), requires_grad=True)
+        else:
+            self.W = torch.nn.Parameter(torch.randn(nOut, nClasses), requires_grad=True)
         self.ce = nn.CrossEntropyLoss()
         nn.init.xavier_normal_(self.W, gain=1)
 

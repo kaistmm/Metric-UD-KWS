@@ -35,13 +35,15 @@ class LossFunction(nn.Module):
         if self.fine_tunning == True:
             x = self.fc(x)
         
-        out_anchor      = F.normalize(x[:,0,:], p=2, dim=1)
-        out_positive    = F.normalize(x[:,1,:], p=2, dim=1)
+        out_positive    = F.normalize(x[:,0,:], p=2, dim=1)
+        out_anchor      = F.normalize(x[:,1,:], p=2, dim=1)
         stepsize        = out_anchor.size()[0]
 
-        output      = -1 * (F.pairwise_distance(out_anchor.unsqueeze(-1),out_positive.unsqueeze(-1).transpose(0,2))**2)
+        output      = -1 * (F.cosine_similarity(out_positive.unsqueeze(-1),out_anchor.unsqueeze(-1).transpose(0,2))**2)
 
         negidx      = self.mineHardNegative(output.detach())
+
+        # import pdb; pdb.set_trace()
 
         out_negative = out_positive[negidx,:]
 

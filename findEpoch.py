@@ -9,7 +9,7 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser(description = "Plot the results")
 
-parser.add_argument('--data_path', type=str, default='data', help='where the data at')
+parser.add_argument('--data_path', type=str, default='final_result', help='where the data at')
 parser.add_argument('--exp_names', nargs='+', default=['exp1'], help='exp names')
 parser.add_argument('--max_epoch', type=int, default=150, help='max epoch')
 parser.add_argument('--test_interval', type=int, default=3, help='text interval')

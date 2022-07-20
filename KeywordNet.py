@@ -109,7 +109,6 @@ class KeywordNet(nn.Module):
         conf_labels = torch.LongTensor([1]*stepsize+[0]*stepsize).cuda()
 
         tstart = time.time()
-        
         for data, labels in loader: #data = torch.Size([N,20,2,16000])
 
             self.zero_grad();
