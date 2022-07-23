@@ -33,18 +33,10 @@ from accuracy import accuracy
 
 class LossFunction(nn.Module):
 
-    def __init__(self, fine_tunning, **kwargs):
+    def __init__(self, **kwargs):
         super(LossFunction, self).__init__()
 
         self.test_normalize = False
-        self.fine_tunning = fine_tunning
-
-        self.nOut = kwargs['nOut']
-        self.nClasses = kwargs['nClasses']
-
-        if self.fine_tunning == True:
-            self.fc = nn.Linear(self.nOut, self.nClasses)
-
         self.criterion  = torch.nn.CrossEntropyLoss()
 
         print('Initialised Prototypical Loss')
@@ -52,9 +44,6 @@ class LossFunction(nn.Module):
     def forward(self, x, label=None):
 
         assert x.size()[1] >= 2
-
-        if self.fine_tunning == True:
-            x = self.fc(x)
         
         out_anchor      = torch.mean(x[:,1:,:],1)
         out_positive    = x[:,0,:]

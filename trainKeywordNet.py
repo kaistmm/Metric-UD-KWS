@@ -64,7 +64,7 @@ parser.add_argument('--scheduler',      type=str,   default="steplr", help='Lear
 parser.add_argument('--lr', type=float, default=0.001,      help='Learning rate');
 parser.add_argument("--lr_decay", type=float, default=0.95, help='Learning rate decay every [test_interval] epochs');
 parser.add_argument('--weight_decay',   type=float, default=0,      help='Weight decay in the optimizer');
-parser.add_argument('--lr_step_size', type=float, default=5, help='Learning rate decaying step')
+parser.add_argument('--lr_step_size', type=float, default=1, help='Learning rate decaying step')
 
 ## Load and save
 parser.add_argument('--initial_model',  type=str, default="", help='Initial model weights');
@@ -185,10 +185,15 @@ for ii in range(0,it-1):
     s.__scheduler__.step()
 
 if args.eval_acc == True:
-    accuracy = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
-    print("Recognition accuracy : %.2f%%"%accuracy)
-    quit()
-
+    # accuracy = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
+    # print("Recognition accuracy : %.2f%%"%accuracy)
+    # quit()
+    pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
+    # import pdb; pdb.set_trace()
+    result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1]);
+    f1, acc = f1_and_acc(pred, lab, None)
+    print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, F1-score %2.4f, Acc %2.4f'%(result[1], result[2], result[3], f1.mean(), acc))
+    quit();
 
 ############################################
 ''' Evaluation code '''
@@ -197,6 +202,8 @@ if args.eval == True:
     sc, lab, trials = s.evaluateFromList(args.fine_test_list, print_interval=100, test_path=args.fine_test_path)
     result = tuneThresholdfromScore(sc, lab, [1, 0.1]);
     
+    import pdb; pdb.set_trace()
+
     dcf_c_miss = 1.
     dcf_c_fa = 1.
     dcf_p_target = 0.05
@@ -204,7 +211,7 @@ if args.eval == True:
     fnrs, fprs, thresholds = ComputeErrorRates(sc, lab)
     mindcf, threshold = ComputeMinDcf(fnrs, fprs, thresholds, dcf_p_target, dcf_c_miss, dcf_c_fa)
 
-    print('EER %2.4f, minDCF %.4f'%(result[1], mindcf))
+    print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, minDCF %.4f'%(result[1], result[2], result[3], mindcf))
 
     ## Save scores
     print('Type desired file name to save scores. Otherwise, leave blank.')
@@ -274,10 +281,10 @@ while(1):
     print(time.strftime("%Y-%m-%d %H:%M:%S"), it, "Training %s with LR %f..."%(args.model,max(clr)));
 
     ## Train network
-    trainLoader.dataset.shuffle_dict()
     if args.trainfunc == 'softmax' or args.trainfunc == 'amsoftmax':
         loss, traineer = s.train_network_classify(loader=trainLoader)
     else:
+        trainLoader.dataset.shuffle_dict()
         loss, traineer = s.train_network(epoch=it, loader=trainLoader, alpha=args.alpha, num_steps=args.env_iteration);
 
     ## Validate and save
@@ -290,9 +297,11 @@ while(1):
         print(args.save_path)
         print(time.strftime("%Y-%m-%d %H:%M:%S"), "LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f"%( max(clr), traineer, loss, result[1]));
         if args.fine_tunning == True:
-            accuracy = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
-            print("Recognition accuracy : %.2f%%"%accuracy)
-            scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f, Accuracy %.2f\n"%(it, max(clr), traineer, loss, result[1], accuracy));
+            pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
+            result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1]);
+            f1, acc = f1_and_acc(pred, lab, None)
+            print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, F1-score %2.4f, Acc %2.4f'%(result[1], result[2], result[3], f1.mean(), acc))
+            scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f%%, Accuracy %2.4f%%, F1-score %2.4f, FRR@FAR=2.5 %2.4f%%, FRR@FRR=10 %2.4f%%\n"%(it, max(clr), traineer, loss, result[1], acc, f1.mean(), result[2], result[3]));
         else:
             scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f\n"%(it, max(clr), traineer, loss, result[1]));
         scorefile.flush()

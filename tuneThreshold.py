@@ -52,8 +52,21 @@ def tuneThresholdfromScore(scores, labels, target_fa, target_fr = None):
     
     idxE = numpy.nanargmin(numpy.absolute((fnr - fpr)))
     eer  = max(fpr[idxE],fnr[idxE])*100
+
+    fnr_at_twoptfive = fnr[numpy.where(fpr>=0.025)][0] * 100
+    fnr_at_ten = fnr[numpy.where(fpr>=0.10)][0] * 100
     
-    return (tunedThreshold, eer, fpr, fnr);
+    # import pdb; pdb.set_trace()
+
+    return (tunedThreshold, eer, fnr_at_twoptfive, fnr_at_ten, fpr, fnr);
+
+def f1_and_acc(preds, labels, f1_type='micro'):
+    f1_score = metrics.f1_score(labels, preds, average=f1_type)
+    acc = metrics.accuracy_score(labels, preds) * 100
+
+    # import pdb; pdb.set_trace()
+
+    return (f1_score, acc)
 
 # Creates a list of false-negative rates, a list of false-positive rates
 # and a list of decision thresholds that give those error-rates.

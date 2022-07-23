@@ -35,7 +35,6 @@ class LossFunction(nn.Module):
         super(LossFunction, self).__init__()
 
         self.test_normalize = True
-        
         self.w = nn.Parameter(torch.tensor(init_w))
         self.b = nn.Parameter(torch.tensor(init_b))
         self.criterion  = torch.nn.CrossEntropyLoss()
@@ -48,7 +47,7 @@ class LossFunction(nn.Module):
             self.register_buffer("queue", torch.randn(self.num_classes, self.Q_size, self.dim))
             self.queue = F.normalize(self.queue, dim=2)
             self.register_buffer("queue_ptr", torch.zeros(self.num_classes, dtype=torch.long))
-        self.start_epoch = 0
+        self.start_epoch = 1
 
         print('Initialised AngleProto')
 

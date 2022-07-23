@@ -53,7 +53,7 @@ class KeywordNet(nn.Module):
         # self.__S__.fc = nn.Linear(1000,20)
 
         LossFunction = importlib.import_module('loss.'+trainfunc).__getattribute__('LossFunction')
-        self.__L__ = LossFunction(fine_tunning, **kwargs).cuda();
+        self.__L__ = LossFunction(**kwargs).cuda();
 
         self.__S2E__ = ConfModelBC(num_layers=1, **kwargs).cuda();
 
@@ -65,8 +65,8 @@ class KeywordNet(nn.Module):
         self.__scheduler__, self.lr_step = Scheduler(self.__optimizer__, **kwargs)
 
         assert self.lr_step in ['epoch', 'iteration']
-        n_fft = 512
-        win_length = 400
+        n_fft = 480
+        # win_length = 400
         hop_length = 160
         self.mfcc = transforms.MFCC(sample_rate=16000, n_mfcc = 40, melkwargs={'n_fft': n_fft, 'n_mels': n_mels, 'hop_length': hop_length,'mel_scale': 'htk'}).cuda()
         self.mixedprec = mixedprec
@@ -445,6 +445,12 @@ class KeywordNet(nn.Module):
                 feat = self.__S__.forward(inp).detach().cpu()
             test_feat_by_key['__silence__'].append(feat)
 
+
+        all_multi_labels = []
+        all_preds = []
+        all_scores = []
+        all_labels = []
+
         for key, feats in test_feat_by_key.items():
             for feat in feats:
                 cos_sims = {}
@@ -452,18 +458,26 @@ class KeywordNet(nn.Module):
                     if True:
                         feat = F.normalize(feat, dim=1)
                         centroid_by_key[_key] = F.normalize(centroid_by_key[_key], dim=1)
-                    cos_sims[_key] = F.cosine_similarity(feat.unsqueeze(-1), centroid_by_key[_key].unsqueeze(-1).transpose(0, 2))
-
+                    cos_sim = F.cosine_similarity(feat.unsqueeze(-1), centroid_by_key[_key].unsqueeze(-1).transpose(0, 2))
+                    cos_sims[_key] = cos_sim
+                    all_scores.append(cos_sim.squeeze(0).numpy()[0])
+                    if key == _key:
+                        all_labels.append(1)
+                    else:
+                        all_labels.append(0)
                 pred = max(cos_sims, key=cos_sims.get)
-                if pred != key:
-                    wrong += 1
-                else:
-                    correct += 1
+                all_preds.append(pred)
+                all_multi_labels.append(key)
+                # if pred != key:
+                #     wrong += 1
+                # else:
+                #     correct += 1
 
-        accuracy = correct / (correct + wrong)
-        accuracy = accuracy * 100
+        # accuracy = correct / (correct + wrong)
+        # accuracy = accuracy * 100
 
-        return accuracy; 
+        # return accuracy; 
+        return (all_preds, all_multi_labels, all_scores, all_labels)
 
     def saveParameters(self, path):
         

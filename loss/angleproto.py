@@ -31,11 +31,11 @@ from accuracy import accuracy
 
 class LossFunction(nn.Module):
 
-    def __init__(self, fine_tunning, init_w=10.0, init_b=-5.0, **kwargs):
+    def __init__(self, init_w=10.0, init_b=-5.0, **kwargs):
         super(LossFunction, self).__init__()
 
         self.test_normalize = True
-        self.fine_tunning = fine_tunning
+        # self.fine_tunning = fine_tunning
 
         self.nOut = kwargs['nOut']
         self.nClasses = kwargs['nClasses']
