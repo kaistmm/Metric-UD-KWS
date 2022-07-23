@@ -60,7 +60,7 @@ def tuneThresholdfromScore(scores, labels, target_fa, target_fr = None):
 
     return (tunedThreshold, eer, fnr_at_twoptfive, fnr_at_ten, fpr, fnr);
 
-def f1_and_acc(preds, labels, f1_type='micro'):
+def f1_and_acc(preds, labels, f1_type=None):
     f1_score = metrics.f1_score(labels, preds, average=f1_type)
     acc = metrics.accuracy_score(labels, preds) * 100
 

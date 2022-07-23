@@ -451,6 +451,11 @@ class KeywordNet(nn.Module):
         all_scores = []
         all_labels = []
 
+        # import pdb; pdb.set_trace()
+
+        del centroid_by_key['__unknown__']
+        del centroid_by_key['__silence__']
+
         for key, feats in test_feat_by_key.items():
             for feat in feats:
                 cos_sims = {}
@@ -466,6 +471,9 @@ class KeywordNet(nn.Module):
                     else:
                         all_labels.append(0)
                 pred = max(cos_sims, key=cos_sims.get)
+
+                if key == '__unknown__' or key == '__silence__':
+                    continue;
                 all_preds.append(pred)
                 all_multi_labels.append(key)
                 # if pred != key:

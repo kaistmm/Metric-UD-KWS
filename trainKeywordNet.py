@@ -130,6 +130,9 @@ parser.add_argument('--env_iteration', type=int, default=5,  help='Iterations of
 ## Remove silence or not
 parser.add_argument('--no_silence', type=bool, default=False, help='If True, no silence during training')
 
+parser.add_argument('--np_save_path', type=str, default='np_results', help='numpy file save path')
+parser.add_argument('--np_file_name', type=str, default='', help='numpy file name')
+
 args = parser.parse_args();
 
 if args.eval == True and args.eval_acc == True:
@@ -193,6 +196,17 @@ if args.eval_acc == True:
     result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1]);
     f1, acc = f1_and_acc(pred, lab, None)
     print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, F1-score %2.4f, Acc %2.4f'%(result[1], result[2], result[3], f1.mean(), acc))
+    ####################
+    # far = result[4]
+    # frr = result[5]
+    # if not(os.path.exists(args.np_save_path)):
+    #     os.makedirs(args.np_save_path)
+
+    # far_path = os.path.join(args.np_save_path,  args.np_file_name + '_far.npy')
+    # frr_path = os.path.join(args.np_save_path, args.np_file_name + '_frr.npy')
+    # numpy.save(far_path, far)
+    # numpy.save(frr_path, frr)
+    ####################
     quit();
 
 ############################################
@@ -298,7 +312,8 @@ while(1):
         f1, acc = f1_and_acc(pred, lab, None)
 
         print(args.save_path)
-        print(time.strftime("%Y-%m-%d %H:%M:%S"), "LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f"%( max(clr), traineer, loss, result[1]));
+        print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, F1-score %2.4f, Acc %2.4f'%(result[1], result[2], result[3], f1.mean(), acc))
+        # print(time.strftime("%Y-%m-%d %H:%M:%S"), "LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f"%( max(clr), traineer, loss, result[1]));
         # if args.fine_tunning == True:
             # pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
             # result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1]);
@@ -307,7 +322,7 @@ while(1):
         #     scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f%%, Accuracy %2.4f%%, F1-score %2.4f, FRR@FAR=2.5 %2.4f%%, FRR@FRR=10 %2.4f%%\n"%(it, max(clr), traineer, loss, result[1], acc, f1.mean(), result[2], result[3]));
         # else:
         #     scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f\n"%(it, max(clr), traineer, loss, result[1]));
-        scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f%%, Accuracy %2.4f%%, F1-score %2.4f, FRR@FAR=2.5 %2.4f%%, FRR@FRR=10 %2.4f%%\n"%(it, max(clr), traineer, loss, result[1], acc, f1.mean(), result[2], result[3]));
+        scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f, Accuracy %2.4f, F1-score %2.4f, FRR@FAR=2.5 %2.4f, FRR@FRR=10 %2.4f\n"%(it, max(clr), traineer, loss, result[1], acc, f1.mean(), result[2], result[3]));
         scorefile.flush()
 
         s.saveParameters(model_save_path+"/model%04d.model"%it);
