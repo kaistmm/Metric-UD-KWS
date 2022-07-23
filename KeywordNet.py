@@ -709,18 +709,28 @@ class KeywordNet(nn.Module):
                 feat = self.__S__.forward(inp).detach().cpu()
             test_feat_by_key['__silence__'].append(feat)
 
+        del test_feat_by_key['__unknown__']
+        del test_feat_by_key['__silence__']
+
         features = []
+        keys = 'zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
         labels = []
-        for key, feats in test_feat_by_key.items():
-            features.extend(feats)
-            for i in range(len(feats)):
+
+        for key in keys:
+            features.extend(test_feat_by_key[key])
+            for i in range(len(test_feat_by_key[key])):
                 labels.append(key)
+
+        # for key, feats in test_feat_by_key.items():
+        #     features.extend(feats)
+        #     for i in range(len(feats)):
+        #         labels.append(key)
 
         feature = torch.stack(features, dim=0).squeeze(1)
         if False:
             feature = F.normalize(feature, dim=1)
         # import pdb; pdb.set_trace()
-        labels = [item.replace("_", "") for item in labels]
+        # labels = [item.replace("_", "") for item in labels]
 
         # import pdb; pdb.set_trace()
 
