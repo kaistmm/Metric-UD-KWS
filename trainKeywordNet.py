@@ -79,8 +79,8 @@ parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datase
 
 # Noise data
 parser.add_argument('--augment',        type=bool,  default=False,  help='Augment input')
-parser.add_argument('--musan_path',     type=str,   default="/mnt/scratch/datasets/musan_split", help='Absolute path to the test set');
-parser.add_argument('--rir_path',       type=str,   default="/mnt/scratch/datasets/RIRS_NOISES/simulated_rirs", help='Absolute path to the test set');
+parser.add_argument('--musan_path',     type=str,   default="/mnt/datasets/speech_augmentation/musan_split", help='Absolute path to the test set');
+parser.add_argument('--rir_path',       type=str,   default="/mnt/datasets/speech_augmentation/simulated_rirs", help='Absolute path to the test set');
 parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
 # parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/_background_noise_", help='Absolute path to the test set');
 
