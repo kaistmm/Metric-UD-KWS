@@ -81,8 +81,7 @@ parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datase
 parser.add_argument('--augment',        type=bool,  default=False,  help='Augment input')
 parser.add_argument('--musan_path',     type=str,   default="/mnt/datasets/speech_augmentation/musan_split", help='Absolute path to the test set');
 parser.add_argument('--rir_path',       type=str,   default="/mnt/datasets/speech_augmentation/simulated_rirs", help='Absolute path to the test set');
-parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
-# parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/_background_noise_", help='Absolute path to the test set');
+parser.add_argument('--noise_path',     type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
 
 #Google speech dataset
 parser.add_argument('--fine_train_list',     type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/fine_tune_list.txt",     help='Train list');
