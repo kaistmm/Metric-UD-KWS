@@ -85,12 +85,12 @@ parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datase
 # parser.add_argument('--noise_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/_background_noise_", help='Absolute path to the test set');
 
 #Google speech dataset
-parser.add_argument('--fine_train_list',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/fine_tune_list.txt",     help='Train list');
-parser.add_argument('--fine_train_path',     type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02", help='Absolute path to the train set');
-parser.add_argument('--fine_test_list',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/test_list.txt",     help='Evaluation list');
-parser.add_argument('--fine_test_path',      type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02", help='Absolute path to the test set');
-parser.add_argument('--test_acc_list',  type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/test_acc_list.txt", help='Evaluation Accuracy list')
-parser.add_argument('--test_acc_path',  type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02", help='Absolute path to the test accuracy set')
+parser.add_argument('--fine_train_list',     type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/fine_tune_list.txt",     help='Train list');
+parser.add_argument('--fine_train_path',     type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the train set');
+parser.add_argument('--fine_test_list',      type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/test_list.txt",     help='Evaluation list');
+parser.add_argument('--fine_test_path',      type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the test set');
+parser.add_argument('--test_acc_list',  type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/test_acc_list.txt", help='Evaluation Accuracy list')
+parser.add_argument('--test_acc_path',  type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the test accuracy set')
 
 ## Model definition
 parser.add_argument('--n_mels',         type=int,   default=40,     help='Number of mel filterbanks');
@@ -115,8 +115,8 @@ parser.add_argument('--fine_tunning',        type=bool,  default=False,  help='F
 parser.add_argument('--sample_per_class',      type=int,   default=300,    help='Number of samples per class')
 
 ## For enrollment
-parser.add_argument('--enroll_list',    type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02/enroll_list.txt", help='enroll list')
-parser.add_argument('--enroll_path',    type=str,   default="/mnt/scratch/datasets/speech_commands_v0.02", help='Absolute path to the enroll set')
+parser.add_argument('--enroll_list',    type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/enroll_list.txt", help='enroll list')
+parser.add_argument('--enroll_path',    type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the enroll set')
 parser.add_argument('--enroll_num',     type=int,   default=10, help="number of shots")
 
 ## Edited
