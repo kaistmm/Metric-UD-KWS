@@ -93,7 +93,7 @@ class ResNet15(nn.Module):
             if i > 0:
                 x = getattr(self, "bn{}".format(i))(x)
                 
-        
+        import pdb; pdb.set_trace()
         x = x.view(x.size(0), x.size(1), -1) # shape: (batch, feats, o3)
         x = torch.mean(x, 2) #torch.Size([200, 45])
 

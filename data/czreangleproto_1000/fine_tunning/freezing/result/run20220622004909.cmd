@@ -1,1 +1,0 @@
-Fine_tunning.py --trainfunc czreangleproto --save_path ./data/czreangleproto_1000/fine_tunning/freezing --initial_model ./data/czreangleproto_1000/model/model0045.model --batch_size 16

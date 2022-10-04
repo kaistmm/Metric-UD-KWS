@@ -1,1 +1,0 @@
-trainKeywordNet.py --trainfunc flattenangleproto --save_path data/flattenangleproto_1000

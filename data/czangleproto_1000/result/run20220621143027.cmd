@@ -1,1 +1,0 @@
-trainKeywordNet.py --trainfunc czangleproto --save_path ./data/czangleproto_1000
