@@ -72,10 +72,10 @@ parser.add_argument('--save_path',      type=str, default="./data/test", help='P
 parser.add_argument('--tsne_path',      type=str, default="test.png", help='Path for tsne image');
 
 # Training and test data
-parser.add_argument('--train_list',     type=str,   default="/mnt/scratch/datasets/words_filtered/train_list_1000.txt",     help='Train list');
-parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/words_filtered/test_list_1000.txt",     help='Evaluation list');
-parser.add_argument('--train_path',     type=str,   default="/mnt/scratch/datasets/words_filtered", help='Absolute path to the train set');
-parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/words_filtered", help='Absolute path to the test set');
+parser.add_argument('--train_list',     type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20/train_list_margin_1s_filter_1000.txt",     help='Train list');
+parser.add_argument('--test_list',      type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20/test_list_margin_1s_filter_1000.txt",     help='Evaluation list');
+parser.add_argument('--train_path',     type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20", help='Absolute path to the train set');
+parser.add_argument('--test_path',      type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20", help='Absolute path to the test set');
 
 # Noise data
 parser.add_argument('--augment',        type=bool,  default=False,  help='Augment input')
