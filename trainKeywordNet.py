@@ -129,7 +129,7 @@ parser.add_argument('--env_iteration', type=int, default=5,  help='Iterations of
 ## Remove silence or not
 parser.add_argument('--no_silence', type=bool, default=False, help='If True, no silence during training')
 
-parser.add_argument('--np_save_path', type=str, default='np_results', help='numpy file save path')
+parser.add_argument('--np_save_path', type=str, default='np_results/ICASSP', help='numpy file save path')
 parser.add_argument('--np_file_name', type=str, default='', help='numpy file name')
 
 args = parser.parse_args();
@@ -196,15 +196,15 @@ if args.eval_acc == True:
     f1, acc = f1_and_acc(pred, lab, None)
     print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, F1-score %2.4f, Acc %2.4f'%(result[1], result[2], result[3], f1.mean(), acc))
     ####################
-    # far = result[4]
-    # frr = result[5]
-    # if not(os.path.exists(args.np_save_path)):
-    #     os.makedirs(args.np_save_path)
+    far = result[4]
+    frr = result[5]
+    if not(os.path.exists(args.np_save_path)):
+        os.makedirs(args.np_save_path)
 
-    # far_path = os.path.join(args.np_save_path,  args.np_file_name + '_far.npy')
-    # frr_path = os.path.join(args.np_save_path, args.np_file_name + '_frr.npy')
-    # numpy.save(far_path, far)
-    # numpy.save(frr_path, frr)
+    far_path = os.path.join(args.np_save_path,  args.np_file_name + '_far.npy')
+    frr_path = os.path.join(args.np_save_path, args.np_file_name + '_frr.npy')
+    numpy.save(far_path, far)
+    numpy.save(frr_path, frr)
     ####################
     quit();
 
