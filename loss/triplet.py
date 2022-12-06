@@ -10,16 +10,16 @@ import random
 
 class LossFunction(nn.Module):
 
-    def __init__(self, fine_tunning, hard_rank=0, hard_prob=0, margin=0, **kwargs):
+    def __init__(self, fine_tuning, hard_rank=0, hard_prob=0, margin=0, **kwargs):
         super(LossFunction, self).__init__()
 
         self.test_normalize = True
-        self.fine_tunning = fine_tunning
+        self.fine_tuning = fine_tuning
 
         self.nOut = kwargs['nOut']
         self.nClasses = kwargs['nClasses']
 
-        if self.fine_tunning == True:
+        if self.fine_tuning == True:
             self.fc = nn.Linear(self.nOut, self.nClasses)
         
         self.hard_rank  = hard_rank
@@ -32,7 +32,7 @@ class LossFunction(nn.Module):
 
         assert x.size()[1] == 2
 
-        if self.fine_tunning == True:
+        if self.fine_tuning == True:
             x = self.fc(x)
         
         out_positive    = F.normalize(x[:,0,:], p=2, dim=1)
@@ -42,8 +42,6 @@ class LossFunction(nn.Module):
         output      = -1 * (F.cosine_similarity(out_positive.unsqueeze(-1),out_anchor.unsqueeze(-1).transpose(0,2))**2)
 
         negidx      = self.mineHardNegative(output.detach())
-
-        # import pdb; pdb.set_trace()
 
         out_negative = out_positive[negidx,:]
 

@@ -36,14 +36,13 @@ import time, os, itertools, shutil, importlib
 from tuneThreshold import tuneThresholdfromScore
 from DatasetLoader import loadWAV, loadSilence
 from ConfModel import *
-from sklearn.manifold import TSNE
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 
 class KeywordNet(nn.Module):
 
-    def __init__(self, model, optimizer, scheduler, trainfunc, mixedprec, fine_tunning, n_mels, **kwargs):
+    def __init__(self, model, optimizer, scheduler, trainfunc, mixedprec, fine_tuning, n_mels, **kwargs):
         super(KeywordNet, self).__init__();
 
         self.trainfunc = trainfunc
@@ -66,7 +65,6 @@ class KeywordNet(nn.Module):
 
         assert self.lr_step in ['epoch', 'iteration']
         n_fft = 480
-        # win_length = 400
         hop_length = 160
         self.mfcc = transforms.MFCC(sample_rate=16000, n_mfcc = 40, melkwargs={'n_fft': n_fft, 'n_mels': n_mels, 'hop_length': hop_length,'mel_scale': 'htk'}).cuda()
         self.mixedprec = mixedprec
@@ -77,18 +75,12 @@ class KeywordNet(nn.Module):
         ## ===== ===== ===== ===== ===== ===== ===== =====
         ''' Fine-tunning '''
         ## ===== ===== ===== ===== ===== ===== ===== =====
-        if fine_tunning:
+        if fine_tuning:
             for name, param in self.__S__.named_parameters():
                 if name in ['conv0.weight', 'bn1.running_mean', 'bn1.running_var', 'bn1.num_batches_tracked', 'conv1.weight',
                                             'bn2.running_mean', 'bn2.running_var', 'bn2.num_batches_tracked', 'conv2.weight',   
                                             'bn3.running_mean', 'bn3.running_var', 'bn3.num_batches_tracked', 'conv3.weight']:
-                # if name in ['output.weight','output.bias']:
                     param.requires_grad = False
-            # Adding layers
-        #     self.__S__ = nn.Sequential(
-        #         self.__S__,
-        #         nn.Linear(1000,20).cuda()
-        #     )
 
     ## ===== ===== ===== ===== ===== ===== ===== =====
     ''' Train network '''
@@ -103,35 +95,33 @@ class KeywordNet(nn.Module):
         counter = 0;
         index   = 0;
         loss    = 0;
-        top1    = 0;    # EER or accuracy
+        top1    = 0;    
 
         criterion   = torch.nn.CrossEntropyLoss()
         conf_labels = torch.LongTensor([1]*stepsize+[0]*stepsize).cuda()
 
         tstart = time.time()
-        for data, labels in loader: #data = torch.Size([N,20,2,16000])
-
+        for data, labels in loader:
             self.zero_grad();
 
             batchsize, minibatchsize, num_wav, num_sample = data.shape
-            data = data.view(-1, num_wav, num_sample) # [N*20, 2, 16000]
+            data = data.view(-1, num_wav, num_sample) 
 
             data = data.cuda()
             data = data.to(torch.float32)
-            data = data.transpose(0,1) # torch.Size([2,N*20,16000])
-            data = self.mfcc(data).transpose(2,3) # torch.Size([2,N*20,40,101])->[2,N*20,101,40]
+            data = data.transpose(0,1)
+            data = self.mfcc(data).transpose(2,3)
 
             feat = []
-            for inp in data:  #inp.shape = [N*20,101,40]
+            for inp in data: 
                 with autocast(enabled = self.mixedprec):
                     outp = self.__S__.forward(inp)
-                # import pdb; pdb.set_trace()
-                feat.append(outp) #feat[1].shape = torch.Size([N*20, 20]) = outp
+                feat.append(outp)
 
-            feat = torch.stack(feat, dim=1).squeeze() #feat.shape = torch.Size([N*20, 2, 20])
+            feat = torch.stack(feat, dim=1).squeeze()
             
             conf_loss   = 0
-            feat = feat.view(batchsize, minibatchsize, num_wav, -1) #feat.shape = torch.Size([N, 20, 2, 20])
+            feat = feat.view(batchsize, minibatchsize, num_wav, -1) 
             
             batchloss = []
             batchprec = []
@@ -191,17 +181,12 @@ class KeywordNet(nn.Module):
         index = 0
         loss = 0
         top1 = 0
-        # EER or accuracy
 
         tstart = time.time()
 
         for data, data_label in loader:
-
-            # data = data.transpose(1, 0).cuda()
             data = data.cuda()
             data = self.mfcc(data).transpose(1, 2)
-
-            # import pdb; pdb.set_trace()
 
             self.zero_grad()
 
@@ -271,23 +256,21 @@ class KeywordNet(nn.Module):
         setfiles = list(set(files))
         setfiles.sort()
 
-        # import pdb; pdb.set_trace()
         ## Save all features to file
         for idx, file in enumerate(setfiles):
-            inp1 = torch.FloatTensor(loadWAV(os.path.join(test_path,file))).cuda() #torch.Size([16000])
+            inp1 = torch.FloatTensor(loadWAV(os.path.join(test_path,file))).cuda() 
 
             with torch.no_grad():
 
                 inp1 = self.mfcc(inp1)
-                inp1 = inp1.transpose(0,1).unsqueeze(0) #torch.Size([16000])->[40,101]->[1,101,40]
+                inp1 = inp1.transpose(0,1).unsqueeze(0) 
 
-                ref_feat = self.__S__.forward(inp1).detach().cpu() #torch.Size([1, 20])
+                ref_feat = self.__S__.forward(inp1).detach().cpu() 
 
 
-            filename = '%04d.wav'%idx #'000000.wav'
+            filename = '%04d.wav'%idx 
 
             feats[file]     = ref_feat 
-            # feats = {'bed/004ae714_nohash_1.wav': tensor([[ 2.6805, -3.2256, ... ,-0.2719]])} : feature 저장
 
             telapsed = time.time() - tstart
 
@@ -303,8 +286,7 @@ class KeywordNet(nn.Module):
         ## Read files and compute all scores
         for idx, line in enumerate(lines): 
 
-            data = line.split(); # data : ['1', 'bed/df1d5024_nohash_0.wav', 'bed/370844f7_nohash_0.wav']
-
+            data = line.split(); 
             ## Append random label if missing
             if len(data) == 2: data = [random.randint(0,1)] + data
 
@@ -312,16 +294,15 @@ class KeywordNet(nn.Module):
             com_feat = feats[data[2]].cuda()
 
             if self.__L__.test_normalize:
-                ref_feat = F.normalize(ref_feat, p=2, dim=1) #torch.Size([1, 20])
-                com_feat = F.normalize(com_feat, p=2, dim=1) #torch.Size([1, 20])
+                ref_feat = F.normalize(ref_feat, p=2, dim=1)
+                com_feat = F.normalize(com_feat, p=2, dim=1) 
 
             dist = F.pairwise_distance(ref_feat.unsqueeze(-1), com_feat.unsqueeze(-1).transpose(0,2)).detach().cpu().numpy();
-            #dist.shape = (1,20)
-            score = -1 * numpy.mean(dist); #-0.012503666803240776
+            score = -1 * numpy.mean(dist);
 
             all_scores.append(score);  
             all_labels.append(int(data[0]));
-            all_trials.append(data[1]+" "+data[2]) #['bed/df1d5024_nohash_0.wav bed/370844f7_nohash_0.wav']
+            all_trials.append(data[1]+" "+data[2])
 
             if idx % print_interval == 0:
                 telapsed = time.time() - tstart
@@ -451,8 +432,6 @@ class KeywordNet(nn.Module):
         all_scores = []
         all_labels = []
 
-        # import pdb; pdb.set_trace()
-
         del centroid_by_key['__unknown__']
         del centroid_by_key['__silence__']
 
@@ -476,15 +455,7 @@ class KeywordNet(nn.Module):
                     continue;
                 all_preds.append(pred)
                 all_multi_labels.append(key)
-                # if pred != key:
-                #     wrong += 1
-                # else:
-                #     correct += 1
 
-        # accuracy = correct / (correct + wrong)
-        # accuracy = accuracy * 100
-
-        # return accuracy; 
         return (all_preds, all_multi_labels, all_scores, all_labels)
 
     def saveParameters(self, path):
@@ -514,244 +485,3 @@ class KeywordNet(nn.Module):
                 continue;
 
             self_state[name].copy_(param);
-
-    ## ===== ===== ===== ===== ===== ===== ===== =====
-    ''' Draw t-SNE '''
-    ## ===== ===== ===== ===== ===== ===== ===== =====
-    def tsne_drawer(self, listfilename, savename, print_interval=100, test_path='', num_eval=10):
-        
-        self.eval();
-        
-        lines       = []
-        files       = []
-        feats       = {}
-        tstart      = time.time()
-    
-        ## Read all lines
-        with open(listfilename) as listfile: #listfilename  = '/mnt/scratch/datasets/words_filtered/test_list.txt'
-            while True:
-                line = listfile.readline();  #line = '1 SHOOK/SHOOK_3157-68361-0001_37.wav SHOOK/SHOOK_8494-244431-0014_6.wav\n'
-                if (not line): 
-                    break;
-
-                data = line.split();         #data = ['1', 'SHOOK/SHOOK_3157-68361-0001_37.wav', 'SHOOK/SHOOK_8494-244431-0014_6.wav']
-
-                ## Append random label if missing
-                if len(data) == 2: data = [random.randint(0,1)] + data
-
-                files.append(data[1])
-                files.append(data[2])
-                lines.append(line)
-        
-        setfiles = list(set(files))
-        setfiles.sort()
-
-        ## Save all features to file
-        features = []
-        labels = []
-
-        for idx, file in enumerate(setfiles):
-            inp1 = torch.FloatTensor(loadWAV(os.path.join(test_path,file))).cuda() #torch.Size([16000])
-
-            with torch.no_grad():
-
-                inp1 = self.mfcc(inp1)
-                inp1 = inp1.transpose(0,1).unsqueeze(0) #torch.Size([16000])->[40,101]->[1,101,40]
-
-                ref_feat = self.__S__.forward(inp1).detach().cpu() #torch.Size([1, 1000])
-                
-            filename = '%04d.wav'%idx #'000000.wav'
-
-            features.append(ref_feat)
-            labels.append(file.split('/')[0])
-            
-            telapsed = time.time() - tstart
-
-            if idx % print_interval == 0:
-                sys.stdout.write("\rReading %d of %d: %.2f Hz, embedding size %d"%(idx,len(setfiles),idx/telapsed,ref_feat.size()[1]));
-        
-        input_feature = torch.stack(features, dim=0).squeeze(1)
-
-        if True:
-            input_feature = F.normalize(input_feature, dim=1)
-
-        # import pdb; pdb.set_trace()
-
-        ## t-SNE
-        tsne = TSNE(n_components=2, perplexity=30, n_iter=300)
-        tsne_ref = tsne.fit_transform(input_feature)
-
-        df = pd.DataFrame(tsne_ref, index=tsne_ref[0:,1])
-        df['x'] = tsne_ref[:,0]
-        df['y'] = tsne_ref[:,1]
-        df['Label'] = labels
-
-        sns.lmplot(x="x", y="y", data=df, fit_reg=False, legend=True, size=20, hue='Label', scatter_kws={"s":200, "alpha":0.5})
-        plt.title('t-SNE result', weight='bold').set_fontsize('14')
-        plt.xlabel('x', weight='bold').set_fontsize('10')
-        plt.ylabel('y', weight='bold').set_fontsize('10')
-        plt.savefig(savename, bbox_inches='tight', pad_inches=1)
-
-    def tsne_drawer_acc(self, num_shots, enrollfilename, listfilename, savename, print_interval=100, enroll_path='', test_path='', num_eval=10, noise_path=''):
-        self.eval()
-        target_keys = '__silence__, zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
-
-        files       = {}
-        test_feat_by_key = {}
-        tstart      = time.time()
-
-        feat_by_key = {}
-        enroll_files = {}
-        centroid_by_key = {}
-
-        # with open(enrollfilename) as enrollfile:
-        #     while True:
-        #         line = enrollfile.readline();
-        #         if (not line):
-        #             break;
-
-        #         data = line.split();
-
-        #         if len(data) != 2:
-        #             sys.stderr.write("Too many or too little data in one line.")
-        #             exit()
-
-        #         key = data[0]
-        #         filename = data[1]
-
-        #         if key in target_keys:
-        #             if key in enroll_files:
-        #                 enroll_files[key].append(filename)
-        #             else:
-        #                 enroll_files[key] = [filename]
-        #         else:
-        #             if '__unknown__' in enroll_files:
-        #                 enroll_files['__unknown__'].append(filename)
-        #             else:
-        #                 enroll_files['__unknown__'] = [filename]
-
-        # for key, audios in enroll_files.items():
-        #     feat_by_key[key] = []
-        #     for audio in audios:
-        #         inp = torch.FloatTensor(loadWAV(os.path.join(enroll_path, audio))).cuda()
-        #         with torch.no_grad():
-        #             inp = self.mfcc(inp)
-        #             inp = inp.transpose(0, 1).unsqueeze(0)
-        #             feat = self.__S__.forward(inp).detach().cpu()
-        #         feat_by_key[key].append(feat)
-
-        # feat_by_key['__silence__'] = []
-        # for i in range(num_shots):
-        #     inp = torch.FloatTensor(loadSilence()).cuda()
-        #     with torch.no_grad():
-        #         inp = self.mfcc(inp)
-        #         inp = inp.transpose(0, 1).unsqueeze(0)
-        #         feat = self.__S__.forward(inp).detach().cpu()
-        #     feat_by_key['__silence__'].append(feat)
-
-        # for key, feats in feat_by_key.items():
-        #     centroid_by_key[key] = torch.mean(torch.stack(feats), axis=0)
-
-        # centroids = []
-        # cent_labels = []
-        # for key, feats in centroid_by_key.items():
-        #     centroids.extend(feats)
-        #     for i in range(len(feats)):
-        #         cent_labels.append(key)
-
-        # cent_feature = torch.stack(centroids, dim=0).squeeze(1)
-        # cent_labels = [item.replace("_", "") for item in cent_labels]
-
-        ## Read all lines
-        with open(listfilename) as listfile:
-            while True:
-                line = listfile.readline();
-                if (not line): 
-                    break;
-
-                data = line.split();
-
-                if len(data) != 2:
-                    sys.stderr.write("Too many data in one line")
-                    exit()
-
-                key = data[0]
-                filename = data[1]
-
-                if key in target_keys:
-                    if key in files:
-                        files[key].append(filename)
-                    else:
-                        files[key] = [filename]
-                else:
-                    if '__unknown__' in files:
-                        files['__unknown__'].append(filename)
-                    else:
-                        files['__unknown__'] = [filename]
-
-        for key, audios in files.items():
-            test_feat_by_key[key] = []
-            for audio in audios:
-                inp = torch.FloatTensor(loadWAV(os.path.join(test_path, audio))).cuda()
-                with torch.no_grad():
-                    inp = self.mfcc(inp)
-                    inp = inp.transpose(0, 1).unsqueeze(0)
-                    feat = self.__S__.forward(inp).detach().cpu()
-                test_feat_by_key[key].append(feat)
-            # import pdb; pdb.set_trace()
-        test_feat_by_key['__silence__'] = []
-
-        for i in range(300) : # magic number!!-> going to modify
-            inp = torch.FloatTensor(loadSilence(noise_path)).cuda()
-            with torch.no_grad():
-                inp = self.mfcc(inp)
-                inp = inp.transpose(0, 1).unsqueeze(0)
-                feat = self.__S__.forward(inp).detach().cpu()
-            test_feat_by_key['__silence__'].append(feat)
-
-        del test_feat_by_key['__unknown__']
-        del test_feat_by_key['__silence__']
-
-        features = []
-        keys = 'zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
-        labels = []
-
-        for key in keys:
-            features.extend(test_feat_by_key[key])
-            for i in range(len(test_feat_by_key[key])):
-                labels.append(key)
-
-        # for key, feats in test_feat_by_key.items():
-        #     features.extend(feats)
-        #     for i in range(len(feats)):
-        #         labels.append(key)
-
-        feature = torch.stack(features, dim=0).squeeze(1)
-        if False:
-            feature = F.normalize(feature, dim=1)
-        # import pdb; pdb.set_trace()
-        # labels = [item.replace("_", "") for item in labels]
-
-        # import pdb; pdb.set_trace()
-
-        ## t-SNE
-        tsne = TSNE(n_components=2, perplexity=30, n_iter=300)
-        # tsne_ref = tsne.fit_transform(cent_feature)
-        tsne_feats = tsne.fit_transform(feature)
-
-        # df = pd.DataFrame(tsne_ref, index=tsne_ref[0:,1])
-        # df['x'] = tsne_ref[:,0]
-        # df['y'] = tsne_ref[:,1]
-        # df['Label'] = cent_labels
-
-        df2 = pd.DataFrame(tsne_feats, index=tsne_feats[0:,1])
-        df2['x'] = tsne_feats[:,0]
-        df2['y'] = tsne_feats[:,1]
-        df2['Label'] = labels
-
-        # sns.lmplot(x="x", y="y", data=df, fit_reg=False, legend=True, size=20, hue='Label', scatter_kws={"s":200, "alpha":0.5})
-        sns.lmplot(x="x", y="y", data=df2, fit_reg=False, legend=True, size=20, hue='Label', scatter_kws={"s":100, "alpha":1})
-        plt.title('t-SNE result', weight='bold').set_fontsize('14')
-        plt.xlabel('x', weight='bold').set_fontsize('10')
-        plt.ylabel('y', weight='bold').set_fontsize('10')
-        plt.savefig(savename, bbox_inches='tight', pad_inches=1)

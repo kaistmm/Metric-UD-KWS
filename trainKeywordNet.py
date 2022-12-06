@@ -28,7 +28,6 @@ THE SOFTWARE.
 
 import sys, time, os, argparse, socket
 import numpy, random
-import pdb
 import torch
 import torch.nn as nn
 import glob
@@ -42,7 +41,7 @@ from DatasetLoader_classify import get_data_loader_classify
 parser = argparse.ArgumentParser(description = "KeywordNet");
 
 parser.add_argument('--config', type=str, default=None,  help='Config YAML file');
-
+ 
 ## Data loader
 parser.add_argument('--batch_size', type=int, default=1,  help='Batch size');
 parser.add_argument('--dict_size', type=int, default=256,  help='Dictionary size');
@@ -53,8 +52,6 @@ parser.add_argument('--test_interval', type=int, default=1, help='Test and save 
 parser.add_argument('--max_epoch',      type=int, default=150, help='Maximum number of epochs');
 parser.add_argument('--trainfunc', type=str, default="angleproto",    help='Loss function');
 parser.add_argument('--mixedprec',      dest='mixedprec', type=bool,  default=False, help='Enable mixed precision training');
-parser.add_argument('--use_prototype', type=bool, default=False, help='Enable protytype for calculating angularprotytpe loss');
-parser.add_argument('--Q_size',  type =int, default=10, help='Queue size')
 
 ## Optimizer
 parser.add_argument('--optimizer',      type=str,   default="adam", help='sgd or adam');
@@ -69,7 +66,6 @@ parser.add_argument('--lr_step_size', type=float, default=1, help='Learning rate
 ## Load and save
 parser.add_argument('--initial_model',  type=str, default="", help='Initial model weights');
 parser.add_argument('--save_path',      type=str, default="./data/test", help='Path for model and logs');
-parser.add_argument('--tsne_path',      type=str, default="test.png", help='Path for tsne image');
 
 # Training and test data
 parser.add_argument('--train_list',     type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20/train_list_margin_1s_filter_1000.txt",     help='Train list');
@@ -102,15 +98,10 @@ parser.add_argument("--hard_prob",      type=float, default=0.5,    help='Hard n
 parser.add_argument("--hard_rank",      type=int,   default=10,     help='Hard negative mining rank in the batch, only for some loss functions')
 
 ## For test only
-parser.add_argument('--eval', dest='eval', action='store_true', help='Eval only')
-parser.add_argument('--eval_acc', dest='eval_acc', action='store_true', help='Eval w/ accuracy')
-
-## For t-SNE
-parser.add_argument('--tsne', dest='tsne', action='store_true', help='t-SNE')
-parser.add_argument('--tsne_acc', dest='tsne_acc', action='store_true', help='t-SNE during evaluating accuracy')
+parser.add_argument('--eval', dest='eval', action='store_true', help='Eval w/ accuracy')
 
 ## For fine-tunning, add layer, freezing
-parser.add_argument('--fine_tunning',        type=bool,  default=False,  help='Fine_tunning')
+parser.add_argument('--fine_tuning',        type=bool,  default=False,  help='Fine_tuning')
 parser.add_argument('--sample_per_class',      type=int,   default=300,    help='Number of samples per class')
 
 ## For enrollment
@@ -134,10 +125,6 @@ parser.add_argument('--np_file_name', type=str, default='', help='numpy file nam
 
 args = parser.parse_args();
 
-if args.eval == True and args.eval_acc == True:
-    sys.stderr.write("Choose only one between --eval and --eval_acc options.")
-    quit();
-
 ############################################
 ''' Setting '''
 ############################################
@@ -147,9 +134,9 @@ def seed_everything(seed: int = 42):
     numpy.random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)  # type: ignore
-    torch.backends.cudnn.deterministic = True  # type: ignore
-    torch.backends.cudnn.benchmark = True  # type: ignore
+    torch.cuda.manual_seed(seed)  
+    torch.backends.cudnn.deterministic = True  
+    torch.backends.cudnn.benchmark = True 
 
 seed_everything(args.seed)
 
@@ -186,72 +173,11 @@ elif(args.initial_model != ""):
 for ii in range(0,it-1):
     s.__scheduler__.step()
 
-if args.eval_acc == True:
-    # accuracy = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
-    # print("Recognition accuracy : %.2f%%"%accuracy)
-    # quit()
+if args.eval == True:
     pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
-    # import pdb; pdb.set_trace()
-    result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1]);
+    result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1])
     f1, acc = f1_and_acc(pred, lab, None)
     print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, F1-score %2.4f, Acc %2.4f'%(result[1], result[2], result[3], f1.mean(), acc))
-    ####################
-    far = result[4]
-    frr = result[5]
-    if not(os.path.exists(args.np_save_path)):
-        os.makedirs(args.np_save_path)
-
-    far_path = os.path.join(args.np_save_path,  args.np_file_name + '_far.npy')
-    frr_path = os.path.join(args.np_save_path, args.np_file_name + '_frr.npy')
-    numpy.save(far_path, far)
-    numpy.save(frr_path, frr)
-    ####################
-    quit();
-
-############################################
-''' Evaluation code '''
-############################################
-if args.eval == True:
-    sc, lab, trials = s.evaluateFromList(args.fine_test_list, print_interval=100, test_path=args.fine_test_path)
-    result = tuneThresholdfromScore(sc, lab, [1, 0.1]);
-    
-    import pdb; pdb.set_trace()
-
-    dcf_c_miss = 1.
-    dcf_c_fa = 1.
-    dcf_p_target = 0.05
-
-    fnrs, fprs, thresholds = ComputeErrorRates(sc, lab)
-    mindcf, threshold = ComputeMinDcf(fnrs, fprs, thresholds, dcf_p_target, dcf_c_miss, dcf_c_fa)
-
-    print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, minDCF %.4f'%(result[1], result[2], result[3], mindcf))
-
-    ## Save scores
-    print('Type desired file name to save scores. Otherwise, leave blank.')
-    userinp = input()
-
-    while True:
-        if userinp == '':
-            quit();
-        elif os.path.exists(userinp) or '.' not in userinp:
-            print('Invalid file name %s. Try again.'%(userinp))
-            userinp = input()
-        else:
-            with open(userinp,'w') as outfile:
-                for vi, val in enumerate(sc):
-                    outfile.write('%.4f %s\n'%(val,trials[vi]))
-            quit();
-
-############################################
-''' t-SNE code '''
-############################################
-if args.tsne == True:
-    s.tsne_drawer(args.fine_test_list, print_interval=100, test_path=args.fine_test_path, savename=args.tsne_path)
-
-    quit();
-
-if args.tsne_acc == True:
-    s.tsne_drawer_acc(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, savename=args.tsne_path, noise_path=args.noise_path)
     quit();
 
 ############################################
@@ -274,7 +200,7 @@ f.close()
 scorefile = open(result_save_path+"/scores.txt", "a+");
 
 ## Initialise data loader
-if args.fine_tunning == True:
+if args.fine_tuning == True:
     args.train_list = args.fine_train_list
     args.train_path = args.fine_train_path
     args.test_list = args.fine_test_list
@@ -304,23 +230,13 @@ while(1):
     if it % args.test_interval == 0:
 
         print(time.strftime("%Y-%m-%d %H:%M:%S"), it, "Evaluating...");
-        # sc, lab, _ = s.evaluateFromList(args.test_list, print_interval=100, test_path=args.test_path)
-        # result = tuneThresholdfromScore(sc, lab, [1, 0.1]);
         pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
         result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1]);
         f1, acc = f1_and_acc(pred, lab, None)
 
         print(args.save_path)
         print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, F1-score %2.4f, Acc %2.4f'%(result[1], result[2], result[3], f1.mean(), acc))
-        # print(time.strftime("%Y-%m-%d %H:%M:%S"), "LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f"%( max(clr), traineer, loss, result[1]));
-        # if args.fine_tunning == True:
-            # pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
-            # result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1]);
-            # f1, acc = f1_and_acc(pred, lab, None)
-            # print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, F1-score %2.4f, Acc %2.4f'%(result[1], result[2], result[3], f1.mean(), acc))
-        #     scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f%%, Accuracy %2.4f%%, F1-score %2.4f, FRR@FAR=2.5 %2.4f%%, FRR@FRR=10 %2.4f%%\n"%(it, max(clr), traineer, loss, result[1], acc, f1.mean(), result[2], result[3]));
-        # else:
-        #     scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f\n"%(it, max(clr), traineer, loss, result[1]));
+        
         scorefile.write("IT %d, LR %f, TEER/TAcc %2.2f, TLOSS %f, VEER %2.4f, Accuracy %2.4f, F1-score %2.4f, FRR@FAR=2.5 %2.4f, FRR@FRR=10 %2.4f\n"%(it, max(clr), traineer, loss, result[1], acc, f1.mean(), result[2], result[3]));
         scorefile.flush()
 

@@ -18,7 +18,6 @@ class LossFunction(nn.Module):
 	    print('Initialised Softmax Loss')
 
 	def forward(self, x, label=None):
-		# x 		= self.fc(x)
 		nloss   = self.criterion(x, label)
 		prec1	= accuracy(x.detach(), label.detach(), topk=(1,))[0]
 

@@ -29,16 +29,13 @@ import sys
 import time
 from sklearn import metrics
 import numpy
-import pdb
 from operator import itemgetter
 
 def tuneThresholdfromScore(scores, labels, target_fa, target_fr = None):
     
     fpr, tpr, thresholds = metrics.roc_curve(labels, scores, pos_label=1)
     fnr = 1 - tpr
-    
-    # fnr = fnr*100
-    # fpr = fpr*100
+
 
     tunedThreshold = [];
     if target_fr:
@@ -47,24 +44,20 @@ def tuneThresholdfromScore(scores, labels, target_fa, target_fr = None):
             tunedThreshold.append([thresholds[idx], fpr[idx], fnr[idx]]);
     
     for tfa in target_fa:
-        idx = numpy.nanargmin(numpy.absolute((tfa - fpr))) # numpy.where(fpr<=tfa)[0][-1]
+        idx = numpy.nanargmin(numpy.absolute((tfa - fpr)))
         tunedThreshold.append([thresholds[idx], fpr[idx], fnr[idx]]);
     
     idxE = numpy.nanargmin(numpy.absolute((fnr - fpr)))
     eer  = max(fpr[idxE],fnr[idxE])*100
 
     fnr_at_twoptfive = fnr[numpy.where(fpr>=0.025)][0] * 100
-    fnr_at_ten = fnr[numpy.where(fpr>=0.10)][0] * 100
-    
-    # import pdb; pdb.set_trace()
+    fnr_at_ten = fnr[numpy.where(fpr>=0.10)][0] * 100 
 
     return (tunedThreshold, eer, fnr_at_twoptfive, fnr_at_ten, fpr, fnr);
 
 def f1_and_acc(preds, labels, f1_type=None):
     f1_score = metrics.f1_score(labels, preds, average=f1_type)
     acc = metrics.accuracy_score(labels, preds) * 100
-
-    # import pdb; pdb.set_trace()
 
     return (f1_score, acc)
 

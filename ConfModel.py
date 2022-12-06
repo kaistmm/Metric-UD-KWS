@@ -1,7 +1,6 @@
 import torch.nn as nn
 import torch as th
 import torch.nn.functional as F
-import pdb
 from pytorch_revgrad import RevGrad
 
 class ConfModelBC(nn.Module):
