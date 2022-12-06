@@ -1,1 +1,0 @@
-trainKeywordNet.py --trainfunc czreangleproto --save_path ./results/czreangleproto_300 --max_epoch 300 --lr_decay 0.97
