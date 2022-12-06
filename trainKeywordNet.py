@@ -26,7 +26,7 @@ THE SOFTWARE.
 #!/usr/bin/python
 #-*- coding: utf-8 -*-
 
-import sys, time, os, argparse, socket
+import sys, time, os, argparse
 import numpy, random
 import torch
 import torch.nn as nn
@@ -44,7 +44,7 @@ parser.add_argument('--config', type=str, default=None,  help='Config YAML file'
  
 ## Data loader
 parser.add_argument('--batch_size', type=int, default=1,  help='Batch size');
-parser.add_argument('--dict_size', type=int, default=256,  help='Dictionary size');
+parser.add_argument('--metric_batch_size', type=int, default=256,  help='Dictionary size');
 parser.add_argument('--nDataLoaderThread', type=int, default=20, help='Number of loader threads');
 
 ## Training details
@@ -68,24 +68,28 @@ parser.add_argument('--initial_model',  type=str, default="", help='Initial mode
 parser.add_argument('--save_path',      type=str, default="./data/test", help='Path for model and logs');
 
 # Training and test data
-parser.add_argument('--train_list',     type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20/train_list_margin_1s_filter_1000.txt",     help='Train list');
-parser.add_argument('--test_list',      type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20/test_list_margin_1s_filter_1000.txt",     help='Evaluation list');
+parser.add_argument('--train_list',     type=str,   default="train_test_lists/pretrain/train_list_margin_1s_filter_1000.txt",     help='Train list');
+parser.add_argument('--test_list',      type=str,   default="train_test_lists/pretrain/test_list_margin_1s_filter_1000.txt",     help='Evaluation list');
 parser.add_argument('--train_path',     type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20", help='Absolute path to the train set');
 parser.add_argument('--test_path',      type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20", help='Absolute path to the test set');
 
 # Noise data
 parser.add_argument('--augment',        type=bool,  default=False,  help='Augment input')
 parser.add_argument('--musan_path',     type=str,   default="/mnt/datasets/speech_augmentation/musan_split", help='Absolute path to the test set');
-parser.add_argument('--rir_path',       type=str,   default="/mnt/datasets/speech_augmentation/simulated_rirs", help='Absolute path to the test set');
 parser.add_argument('--noise_path',     type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
 
 #Google speech dataset
-parser.add_argument('--fine_train_list',     type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/fine_tune_list.txt",     help='Train list');
+parser.add_argument('--fine_train_list',     type=str,   default="train_test_lists/finetune/fine_train_list.txt",     help='Train list');
 parser.add_argument('--fine_train_path',     type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the train set');
-parser.add_argument('--fine_test_list',      type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/test_list.txt",     help='Evaluation list');
+parser.add_argument('--fine_test_list',      type=str,   default="train_test_lists/finetune/fine_test_list.txt",     help='Evaluation list');
 parser.add_argument('--fine_test_path',      type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the test set');
-parser.add_argument('--test_acc_list',  type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/test_acc_list.txt", help='Evaluation Accuracy list')
+parser.add_argument('--test_acc_list',  type=str,   default="train_test_lists/test/10_test_acc_list.txt", help='Evaluation Accuracy list')
 parser.add_argument('--test_acc_path',  type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the test accuracy set')
+
+## For enrollment
+parser.add_argument('--enroll_list',    type=str,   default="train_test_lists/enroll/10_enroll_list.txt", help='enroll list')
+parser.add_argument('--enroll_path',    type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the enroll set')
+parser.add_argument('--enroll_num',     type=int,   default=10, help="number of shots")
 
 ## Model definition
 parser.add_argument('--n_mels',         type=int,   default=40,     help='Number of mel filterbanks');
@@ -93,21 +97,13 @@ parser.add_argument('--n_maps',         type=int,   default=45,     help='Number
 parser.add_argument('--model',          type=str,   default="ResNet15",     help='Name of model definition');
 parser.add_argument('--nOut',           type=int,   default=1001,    help='Embedding size in the last FC layer (the number of classes at training');
 parser.add_argument('--nClasses',       type=int,   default=1001,    help='Number of classes to be classified')
-parser.add_argument('--del_ratio',      type=float, default=0.0)
-parser.add_argument("--hard_prob",      type=float, default=0.5,    help='Hard negative mining probability, otherwise random, only for some loss functions')
-parser.add_argument("--hard_rank",      type=int,   default=10,     help='Hard negative mining rank in the batch, only for some loss functions')
 
 ## For test only
-parser.add_argument('--eval', dest='eval', action='store_true', help='Eval w/ accuracy')
+parser.add_argument('--eval', dest='eval', action='store_true', help='Only evaluation')
 
 ## For fine-tunning, add layer, freezing
-parser.add_argument('--fine_tuning',        type=bool,  default=False,  help='Fine_tuning')
+parser.add_argument('--fine_tuning',        dest='fine_tuning',  action='store_true',  help='For fine tuning')
 parser.add_argument('--sample_per_class',      type=int,   default=300,    help='Number of samples per class')
-
-## For enrollment
-parser.add_argument('--enroll_list',    type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/enroll_list.txt", help='enroll list')
-parser.add_argument('--enroll_path',    type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the enroll set')
-parser.add_argument('--enroll_num',     type=int,   default=10, help="number of shots")
 
 ## Edited
 parser.add_argument('--input_length',      type=int,  default=16000,  help='input length(default=16000)')
@@ -174,7 +170,7 @@ for ii in range(0,it-1):
     s.__scheduler__.step()
 
 if args.eval == True:
-    pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
+    pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
     result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1])
     f1, acc = f1_and_acc(pred, lab, None)
     print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, F1-score %2.4f, Acc %2.4f'%(result[1], result[2], result[3], f1.mean(), acc))
@@ -230,7 +226,7 @@ while(1):
     if it % args.test_interval == 0:
 
         print(time.strftime("%Y-%m-%d %H:%M:%S"), it, "Evaluating...");
-        pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, print_interval=100, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
+        pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
         result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1]);
         f1, acc = f1_and_acc(pred, lab, None)
 

@@ -28,17 +28,13 @@ THE SOFTWARE.
 
 import torch
 import torch.nn as nn
-import torchaudio
 import numpy
 import random
 import os
-import threading
-import time
 import math
 import glob
 import soundfile
 from scipy.io import wavfile
-from queue import Queue
 from torch.utils.data import Dataset, DataLoader
 from torchaudio import transforms
 from scipy import signal
@@ -47,7 +43,7 @@ def worker_init_fn(worker_id):
     numpy.random.seed(numpy.random.get_state()[1][0] + worker_id)
 
 class wav_loader(Dataset):
-    def __init__(self, dataset_file_name, train_path, sample_per_class, augment, musan_path, rir_path, n_mels, input_length):
+    def __init__(self, dataset_file_name, train_path, sample_per_class, augment, musan_path, n_mels, input_length):
         self.dataset_file_name = dataset_file_name;
         self.sample_per_class = sample_per_class
         self.input_length = input_length
@@ -55,9 +51,8 @@ class wav_loader(Dataset):
         self.data_label = []
         
         ## Noise
-        self.AUG = AugmentWAV(musan_path=musan_path, rir_path=rir_path) 
+        self.AUG = AugmentWAV(musan_path=musan_path) 
         self.musan_path = musan_path
-        self.rir_path   = rir_path
         self.augment    = augment        
         ### Read Training Files...
         with open(self.dataset_file_name) as f:
@@ -112,7 +107,7 @@ class wav_loader(Dataset):
 #############################################
 class AugmentWAV(object):
 
-    def __init__(self, musan_path, rir_path):
+    def __init__(self, musan_path):
 
         self.max_audio = 16000
 
@@ -197,9 +192,9 @@ def loadWAV(filename):
     return audio
 
 
-def get_data_loader_classify(dataset_file_name, batch_size, nDataLoaderThread, train_path, sample_per_class, augment, musan_path, rir_path, n_mels, input_length, **kwargs):
+def get_data_loader_classify(dataset_file_name, batch_size, nDataLoaderThread, train_path, sample_per_class, augment, musan_path, n_mels, input_length, **kwargs):
 
-    train_dataset = wav_loader(dataset_file_name, train_path, sample_per_class, augment, musan_path, rir_path, n_mels, input_length)
+    train_dataset = wav_loader(dataset_file_name, train_path, sample_per_class, augment, musan_path, n_mels, input_length)
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,

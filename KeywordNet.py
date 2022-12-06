@@ -31,14 +31,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.cuda.amp import autocast, GradScaler
 from torchaudio import transforms
-import numpy, math, pdb, sys, random
-import time, os, itertools, shutil, importlib
+import numpy, sys, random
+import time, os, importlib
 from tuneThreshold import tuneThresholdfromScore
 from DatasetLoader import loadWAV, loadSilence
 from ConfModel import *
-import seaborn as sns
-import pandas as pd
-import matplotlib.pyplot as plt
 
 class KeywordNet(nn.Module):
 
@@ -97,9 +94,6 @@ class KeywordNet(nn.Module):
         loss    = 0;
         top1    = 0;    
 
-        criterion   = torch.nn.CrossEntropyLoss()
-        conf_labels = torch.LongTensor([1]*stepsize+[0]*stepsize).cuda()
-
         tstart = time.time()
         for data, labels in loader:
             self.zero_grad();
@@ -120,7 +114,6 @@ class KeywordNet(nn.Module):
 
             feat = torch.stack(feat, dim=1).squeeze()
             
-            conf_loss   = 0
             feat = feat.view(batchsize, minibatchsize, num_wav, -1) 
             
             batchloss = []
@@ -169,7 +162,7 @@ class KeywordNet(nn.Module):
         return (loss/counter, top1/counter);
 
     ## ===== ===== ===== ===== ===== ===== ===== =====
-    ''' Fine-tune network '''
+    ''' Train network (Classification) '''
     ## ===== ===== ===== ===== ===== ===== ===== =====
 
     def train_network_classify(self, loader):
@@ -225,105 +218,15 @@ class KeywordNet(nn.Module):
         return (loss / counter, top1 / counter)
 
     ## ===== ===== ===== ===== ===== ===== ===== =====
-    ''' Evaluate from list '''
-    ## ===== ===== ===== ===== ===== ===== ===== =====
-
-    def evaluateFromList(self, listfilename, print_interval=100, test_path='', num_eval=10):
-        
-        self.eval();
-        
-        lines       = []
-        files       = []
-        feats       = {}
-        tstart      = time.time()
-
-        ## Read all lines
-        with open(listfilename) as listfile:
-            while True:
-                line = listfile.readline();
-                if (not line): 
-                    break;
-
-                data = line.split();
-
-                ## Append random label if missing
-                if len(data) == 2: data = [random.randint(0,1)] + data
-
-                files.append(data[1])
-                files.append(data[2])
-                lines.append(line)
-        
-        setfiles = list(set(files))
-        setfiles.sort()
-
-        ## Save all features to file
-        for idx, file in enumerate(setfiles):
-            inp1 = torch.FloatTensor(loadWAV(os.path.join(test_path,file))).cuda() 
-
-            with torch.no_grad():
-
-                inp1 = self.mfcc(inp1)
-                inp1 = inp1.transpose(0,1).unsqueeze(0) 
-
-                ref_feat = self.__S__.forward(inp1).detach().cpu() 
-
-
-            filename = '%04d.wav'%idx 
-
-            feats[file]     = ref_feat 
-
-            telapsed = time.time() - tstart
-
-            if idx % print_interval == 0:
-                sys.stdout.write("\rReading %d of %d: %.2f Hz, embedding size %d"%(idx,len(setfiles),idx/telapsed,ref_feat.size()[1]));
-
-        print('')
-        all_scores = [];
-        all_labels = [];
-        all_trials = [];
-        tstart = time.time()
-
-        ## Read files and compute all scores
-        for idx, line in enumerate(lines): 
-
-            data = line.split(); 
-            ## Append random label if missing
-            if len(data) == 2: data = [random.randint(0,1)] + data
-
-            ref_feat = feats[data[1]].cuda()
-            com_feat = feats[data[2]].cuda()
-
-            if self.__L__.test_normalize:
-                ref_feat = F.normalize(ref_feat, p=2, dim=1)
-                com_feat = F.normalize(com_feat, p=2, dim=1) 
-
-            dist = F.pairwise_distance(ref_feat.unsqueeze(-1), com_feat.unsqueeze(-1).transpose(0,2)).detach().cpu().numpy();
-            score = -1 * numpy.mean(dist);
-
-            all_scores.append(score);  
-            all_labels.append(int(data[0]));
-            all_trials.append(data[1]+" "+data[2])
-
-            if idx % print_interval == 0:
-                telapsed = time.time() - tstart
-                sys.stdout.write("\rComputing %d of %d: %.2f Hz"%(idx,len(lines),idx/telapsed));
-                sys.stdout.flush();
-
-        print('\n')
-
-        return (all_scores, all_labels, all_trials);
-
-    ## ===== ===== ===== ===== ===== ===== ===== =====
     ''' Evaluate accuracy from list '''
     ## ===== ===== ===== ===== ===== ===== ===== =====
-    def evaluateAccuracyFromList(self, num_shots, enrollfilename, listfilename, print_interval=100, enroll_path='', test_path='', num_eval=10, noise_path=''):
+    def evaluateAccuracyFromList(self, num_shots, enrollfilename, listfilename, enroll_path='', test_path='', noise_path=''):
         
         self.eval();
         target_keys = '__silence__, zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
 
         files       = {}
         test_feat_by_key = {}
-        tstart      = time.time()
 
         feat_by_key = {}
         enroll_files = {}
@@ -404,8 +307,6 @@ class KeywordNet(nn.Module):
                         files['__unknown__'].append(filename)
                     else:
                         files['__unknown__'] = [filename]
-        wrong = 0
-        correct = 0
 
         for key, audios in files.items():
             test_feat_by_key[key] = []
@@ -418,7 +319,7 @@ class KeywordNet(nn.Module):
                 test_feat_by_key[key].append(feat)
         test_feat_by_key['__silence__'] = []
 
-        for i in range(300) : # magic number!!-> going to modify
+        for i in range(300) : # 300 is # of test samples per class
             inp = torch.FloatTensor(loadSilence(noise_path)).cuda()
             with torch.no_grad():
                 inp = self.mfcc(inp)
@@ -438,7 +339,7 @@ class KeywordNet(nn.Module):
         for key, feats in test_feat_by_key.items():
             for feat in feats:
                 cos_sims = {}
-                for _key, centroids in centroid_by_key.items():
+                for _key, _ in centroid_by_key.items():
                     if True:
                         feat = F.normalize(feat, dim=1)
                         centroid_by_key[_key] = F.normalize(centroid_by_key[_key], dim=1)

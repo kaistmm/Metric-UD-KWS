@@ -14,14 +14,32 @@ The [Google Speech Commands](https://www.tensorflow.org/datasets/catalog/speech_
 The dataset is split into train dataset and test dataset. Train dataset is comprised with 20 kinds of keywords out of 30. Test dataset is comprised with the other 10 kinds of keywords. Lists for both of the split dataset are in the directory of 'dataset_split'. 
 
 #### Training examples
-
-- Default model
+- Pre-training (Softmax, AM-Softmax)
 ```
-python ./trainKeywordNet.py --save_path data/[exp_name] --train_path [/path/to/speech_commands_v0.01] --test_path [/path/to/speech_commands_v0.01] --noise_path [/path/to/speech_commands_v0.01/_background_noise_]
+python trainKeywordNet.py --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26]
+```
+- Pre-training (Prototypical, Angular Prototypical)
+```
+python trainKeywordNet.py --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26]
+```
+
+- Fine-tuning (Softmax, AM-Softmax)
+```
+python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26] --initial_model [model.pt] --lr 0.00001
+```
+- Fine-tuning (Prototypical, Angular Prototypical)
+```
+python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26] --initial_model [model.pt] --lr 0.00001
+```
+#### Testing Examples
+```
+python trainKeywordNet.py --eval --save_path [save_path] --initial_model [initial_model] --enroll_num [1, 5, 10 (# of shots)] --enroll_list [/path/to/enroll_list.txt] --test_acc_list [/path/to/test_acc_list.txt]
 ```
 
 #### Implemented loss functions
 ```
+Softmax (softmax)
+Additive Margin Softmax (amsoftmax)
 Prototypical (proto)
 Angular Prototypical (angleproto)
 ```
@@ -30,4 +48,5 @@ Angular Prototypical (angleproto)
 For the model, res15 from *"deep residual learning for small-footprint keyword spotting", R. Tang & J. Lin, 2018, ICASSP* is used. Code for the model is based on [Honk: CNNs for Keyword Spotting](https://github.com/castorini/honk).
 ```
 ResNet15
+ResNet26
 ```

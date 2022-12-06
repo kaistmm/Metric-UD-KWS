@@ -28,17 +28,13 @@ THE SOFTWARE.
 
 import torch
 import torch.nn as nn
-import torchaudio
 import numpy
 import random
 import os
-import threading
-import time
 import math
 import glob
 import soundfile
 from scipy.io import wavfile
-from queue import Queue
 from torch.utils.data import Dataset, DataLoader
 from torchaudio import transforms
 from scipy import signal
@@ -47,7 +43,7 @@ def worker_init_fn(worker_id):
     numpy.random.seed(numpy.random.get_state()[1][0] + worker_id)
 
 class wav_split(Dataset):
-    def __init__(self, dataset_file_name, train_path, dict_size, augment, fine_tuning, no_silence, musan_path, rir_path, n_mels, alpha, input_length):
+    def __init__(self, dataset_file_name, train_path, metric_batch_size, augment, fine_tuning, no_silence, musan_path, n_mels, alpha, input_length):
         self.dataset_file_name = dataset_file_name;
 
         self.data_dict = {};
@@ -58,13 +54,12 @@ class wav_split(Dataset):
         self.input_length = input_length
         
         ## Noise
-        self.AUG = AugmentWAV(musan_path=musan_path, rir_path=rir_path) 
+        self.AUG = AugmentWAV(musan_path=musan_path) 
         self.musan_path = musan_path
-        self.rir_path   = rir_path
         self.augment    = augment
         self.fine_tuning = fine_tuning
         self.no_silence = no_silence
-        self.dict_size = dict_size
+        self.metric_batch_size = metric_batch_size
         self.alpha  = alpha
 
         ### Read Training Files...
@@ -123,13 +118,13 @@ class wav_split(Dataset):
         return torch.FloatTensor(audio_aug_batch), torch.LongTensor(label)
 
     def __len__(self):
-        return len(self.lines)//self.dict_size
+        return len(self.lines)//self.metric_batch_size
 
     def shuffle_dict(self):
         self.sampled_data = []
         for _ in range(self.__len__()):
-            selected_dict = random.sample(list(self.data_dict.keys()), self.dict_size)
-            selected_index = random.sample(list(range(len(self.lines)//(len(self.data_dict)-1))), self.dict_size)
+            selected_dict = random.sample(list(self.data_dict.keys()), self.metric_batch_size)
+            selected_index = random.sample(list(range(len(self.lines)//(len(self.data_dict)-1))), self.metric_batch_size)
             self.sampled_data.append((selected_dict, selected_index))
 
 
@@ -152,7 +147,7 @@ class wav_split(Dataset):
 #############################################
 class AugmentWAV(object):
 
-    def __init__(self, musan_path, rir_path):
+    def __init__(self, musan_path):
 
         self.max_audio = 16000
 
@@ -227,14 +222,14 @@ def load_silence(max_audio=16000):
 
 def load_wav(filelist, index):
     # Read wav file and convert to torch tensor
-    audio, sample_rate = soundfile.read(filelist[index])
+    audio, sr = soundfile.read(filelist[index])
 
     temp = filelist[:index] + filelist[index+1 :]
     choice = random.choice(temp)
 
-    audio_pos, sample_rate = soundfile.read(choice)
+    audio_pos, _ = soundfile.read(choice)
 
-    max_audio = 16000
+    max_audio = sr * 1 # 1 second
     
     len_audio = audio.shape[0]
     len_audio_pos = audio_pos.shape[0]
@@ -284,12 +279,11 @@ def loadSilence(noise_path, max_audio=16000):
     return bg_noise
 
 def loadWAV(filename):             
-    # Maximum audio length
-    max_audio = 16000
-
     # Read wav file and convert to torch tensor
-    audio, sample_rate = soundfile.read(filename)
+    audio, sr = soundfile.read(filename)
     len_audio = audio.shape[0]
+
+    max_audio = sr * 1
 
     if len_audio < max_audio:
         shortage = math.floor((max_audio - len_audio + 1) / 2)
@@ -304,9 +298,9 @@ def loadWAV(filename):
     return audio
 
 
-def get_data_loader(dataset_file_name, batch_size, dict_size, nDataLoaderThread, augment, fine_tuning, no_silence, musan_path, rir_path, train_path, alpha, n_mels, input_length, **kwargs):
+def get_data_loader(dataset_file_name, batch_size, metric_batch_size, nDataLoaderThread, augment, fine_tuning, no_silence, musan_path, train_path, alpha, n_mels, input_length, **kwargs):
 
-    train_dataset = wav_split(dataset_file_name, train_path, dict_size, augment, fine_tuning, no_silence, musan_path, rir_path, n_mels, alpha, input_length)
+    train_dataset = wav_split(dataset_file_name, train_path, metric_batch_size, augment, fine_tuning, no_silence, musan_path, n_mels, alpha, input_length)
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,

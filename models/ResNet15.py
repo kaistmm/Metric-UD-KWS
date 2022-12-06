@@ -36,7 +36,7 @@ from torch.nn import Parameter
 from utils import PreEmphasis
 
 class ResNet15(nn.Module):
-    def __init__(self, nOut, del_ratio, n_maps, **kwargs):
+    def __init__(self, nOut, n_maps, **kwargs):
         super(ResNet15, self).__init__()
 
         n_labels = nOut
@@ -57,7 +57,6 @@ class ResNet15(nn.Module):
             self.add_module("conv{}".format(i + 1), conv)
 
         self.output = nn.Linear(n_maps, n_labels)
-        self.del_ratio = del_ratio
 
     def forward(self, x): 
         x = x.unsqueeze(1).clone()
