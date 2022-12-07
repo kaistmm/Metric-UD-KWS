@@ -20,6 +20,16 @@ test/
 !requirements.txt
 !train_list.txt
 !test_list.txt
+!test_list_margin_1s_filter_1000.txt
+!train_list_margin_1s_filter_1000.txt
+!fine_test_list.txt
+!fine_train_list.txt
+!1_enroll_list.txt
+!5_enroll_list.txt
+!10_enroll_list.txt
+!1_test_acc_list.txt
+!5_test_acc_list.txt
+!10_test_acc_list.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
