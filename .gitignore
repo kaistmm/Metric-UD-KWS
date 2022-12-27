@@ -30,7 +30,8 @@ test/
 !1_test_acc_list.txt
 !5_test_acc_list.txt
 !10_test_acc_list.txt
-
+#Accepted folders
+!PT_models/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
