@@ -73,7 +73,7 @@ def main(args):
     GSC_TEST_CONFIG = 'zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
     GSC_TEST_CONFIG = GSC_TEST_CONFIG + [(elem + 's') for elem in GSC_TEST_CONFIG]
 
-    with open('./words_list/words_filter_0.1s_cer50_list.pkl', 'rb') as f:
+    with open('./words_list/words_filter_1s_cer20.pkl', 'rb') as f:
         words_list = pickle.load(f)
 
     num_test = 10 # number of test keywords 

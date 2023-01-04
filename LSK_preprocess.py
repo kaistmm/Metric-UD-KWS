@@ -4,11 +4,7 @@ import pickle
 from tqdm import tqdm
 
 CHECK_WORDS = 1000
-# path = '/mnt/scratch/datasets/words_filtered/'
 path = '/mnt/work4/datasets/keyword/words_filter_1s_cer20/'
-# path = '/mnt/scratch/datasets/audio/train/de/clips/'
-# path = '/mnt/scratch2/jjm/Cmd_General/KSC/' # 3000 words
-# path = '/mnt/scratch/datasets/keyword/en_kr/'
 
 folder_list = os.listdir(path) 
 num_folder = len(folder_list)
@@ -59,6 +55,6 @@ print(num_words_sorted[:CHECK_WORDS])
 print(num_total_words)
 
 os.makedirs('./words_list', exist_ok=True)
-with open('./words_list/words_filter_0.1s_cer50_list.pkl', 'wb') as f:
+with open('./words_list/words_filter_1s_cer20.pkl', 'wb') as f:
     pickle.dump(num_words_sorted,f)
 
