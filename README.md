@@ -13,6 +13,10 @@ The [Google Speech Commands](https://www.tensorflow.org/datasets/catalog/speech_
 
 The dataset is split into train dataset and test dataset. Train dataset is comprised with 20 kinds of keywords out of 30. Test dataset is comprised with the other 10 kinds of keywords. Lists for both of the split dataset are in the directory of 'dataset_split'. 
 
+#### Data preparation for LSK
+- Step 1. Run ```LSK_preprocess.py```.
+- Step 2. Run ```LSK_make_list.py```.
+
 #### Pre-trained models
 - Pre-trained on LSK & Fine-tuned on GSC (both using angleproto loss)
 ```
