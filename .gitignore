@@ -15,7 +15,6 @@ exps/
 data/
 np_results/
 results/
-test/
 # Accepted text files
 !requirements.txt
 !train_list.txt
