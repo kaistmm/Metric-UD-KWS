@@ -15,18 +15,18 @@ The Google Speech Commands datasets are used for these experiments. Follow the i
 
 ### Train a new model
 #### Dependencies
-```
-conda create --file requirements.txt -n [env_name] -c pytorch -c conda-forge
+```sh
+$ conda create --file requirements.txt -n [env_name] -c pytorch -c conda-forge
 ```
 
 #### Pre-train
-```
-$python trainKeywordNet.py --save_path [save_path] --augment True --dict_size [dict_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26]
+```sh
+$ python trainKeywordNet.py --save_path [save_path] --augment True --dict_size [dict_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26]
 ```
 
 #### Fine-tune
-```
-$python trainKeywordNet.py --save_path [save_path] --augment True --dict_size 16 --trainfunc [trainfunc] --fine_tunning True --initial_model [model.pt] --lr 0.00001 --lr_step_size 1
+```sh
+$ python trainKeywordNet.py --save_path [save_path] --augment True --dict_size 16 --trainfunc [trainfunc] --fine_tunning True --initial_model [model.pt] --lr 0.00001 --lr_step_size 1
 ```
 
 #### Implemented loss functions
