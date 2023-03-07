@@ -5,28 +5,28 @@ This repository contains the official code for Metric learning for user-defined 
 
 [Project page](https://mm.kaist.ac.kr/projects/kws/)
 
-### Introdcution
+#### Introdcution
 
 
 
-### License
+#### License
 
 
-### Dependencies
+#### Dependencies
 ```
 conda create --file requirements.txt -n [env_name] -c pytorch -c conda-forge
 ```
 
-### Data preparation (LibriSpeech Keywords)
+#### Data preparation (LibriSpeech Keywords)
 Please find the LibriSpeech Keyworkds(LSK) [here]().
 
-### Pre-train
+#### Pre-train
 
 ```
 $python trainKeywordNet.py --save_path [save_path] --augment True --dict_size [dict_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26]
 ```
 
-### Fine-tune
+#### Fine-tune
 
 ```
 $python trainKeywordNet.py --save_path [save_path] --augment True --dict_size 26 --batch_size 1 --trainfunc [trainfunc] --fine_tunning True --initial_model [model.pt] --lr 0.00001 --lr_step_size 1
