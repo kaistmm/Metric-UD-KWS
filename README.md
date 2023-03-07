@@ -7,7 +7,7 @@ Official code for Metric learning for user-defined keyword spotting
 
 ### Introdcution
 ---
-'''python
+'''Bash
 python train.py
 '''
 
