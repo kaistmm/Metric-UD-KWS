@@ -6,8 +6,9 @@ Official code for Metric learning for user-defined keyword spotting
 [Project page](https://mm.kaist.ac.kr/projects/kws/)
 
 ### Introdcution
+'''python
+'''
 ---
-hi
 
 ### License
 ---
