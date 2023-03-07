@@ -26,11 +26,11 @@ Please find the LibriSpeech Keyworkds(LSK) [here]().
 
 <code>$python trainKeywordNet.py --save_path [save_path] --augment True --dict_size 26 --batch_size 1 --trainfunc [trainfunc] --fine_tunning True --initial_model [model.pt] --lr 0.00001 --lr_step_size 1</code>.
 
-### Implemented loss functions
-'''
+#### Implemented loss functions
+```
 Prototypical (proto)
 Angular Prototypical (angleproto)
-'''
+```
 
 #### Implemented models
 For the model, res15 from *"deep residual learning for small-footprint keyword spotting", R. Tang & J. Lin, 2018, ICASSP* is used. Code for the model is based on [Honk: CNNs for Keyword Spotting](https://github.com/castorini/honk).
