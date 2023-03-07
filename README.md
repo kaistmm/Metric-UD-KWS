@@ -7,19 +7,19 @@ Official code for Metric learning for user-defined keyword spotting
 
 ### Introdcution
 ---
-'''Bash
-python train.py
-'''
-<code>python train.py</code>.
+
 
 ### License
 ---
 
 ### Installation
 ---
+<code>python train.py</code>.
 
 ### Pre-train
 ---
+<code>python train.py</code>.
 
 ### Fine-tune
 ---
+<code>python train.py</code>.
