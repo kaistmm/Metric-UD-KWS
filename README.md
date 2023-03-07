@@ -17,8 +17,11 @@ This repository contains the official code for Metric learning for user-defined 
 conda create --file requirements.txt -n [env_name] -c pytorch -c conda-forge
 ```
 
-#### Data preparation (LibriSpeech Keywords)
+### Data preparation
+#### LibriSpeech Keywords
 Please find the LibriSpeech Keyworkds(LSK) [here]().
+#### Google Speech Commands
+The Google Speech Commands datasets are used for these experiments. Follow the instructions on this page to download and prepare the data for training. We used Speech Commands v0.01 (30 keywords in total) for our baseline.
 
 #### Pre-train
 
@@ -29,12 +32,13 @@ $python trainKeywordNet.py --save_path [save_path] --augment True --dict_size [d
 #### Fine-tune
 
 ```
-$python trainKeywordNet.py --save_path [save_path] --augment True --dict_size 26 --batch_size 1 --trainfunc [trainfunc] --fine_tunning True --initial_model [model.pt] --lr 0.00001 --lr_step_size 1
+$python trainKeywordNet.py --save_path [save_path] --augment True --dict_size 16 --trainfunc [trainfunc] --fine_tunning True --initial_model [model.pt] --lr 0.00001 --lr_step_size 1
 ```
 
 #### Implemented loss functions
 ```
-Prototypical (proto)
+Softmax (Softmax)
+Additive Margin Softmax loss(AM-Soft)
 Angular Prototypical (angleproto)
 ```
 
