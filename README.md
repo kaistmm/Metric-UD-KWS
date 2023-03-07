@@ -18,8 +18,8 @@ Official code for Metric learning for user-defined keyword spotting
 
 ### Pre-train
 ---
-<code>python train.py</code>.
+<code>$python train.py</code>.
 
 ### Fine-tune
 ---
-<code>python train.py</code>.
+<code>$python train.py</code>.
