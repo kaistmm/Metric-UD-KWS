@@ -26,7 +26,7 @@ The Google Speech Commands datasets are used for these experiments. Follow the i
 ### Train a new model
 #### Dependencies
 ```sh
-$ conda create --file requirements.txt -n [env_name] -c pytorch -c conda-forge
+conda create --file requirements.txt -n [env_name] -c pytorch -c conda-forge
 ```
 
 #### Training examples
