@@ -14,6 +14,9 @@ Official code for Metric learning for user-defined keyword spotting
 ### Installation
 <code>python train.py</code>.
 
+### Dataset
+Please find the dataset [here]().
+
 ### Pre-train
 
 <code>$python train.py</code>.
