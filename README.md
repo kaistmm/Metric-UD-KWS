@@ -5,14 +5,19 @@ This repository contains the official code for Metric learning for user-defined 
 
 [Project page](https://mm.kaist.ac.kr/projects/kws/)
 
+If you find our paper useful in your research, please use the following BibTeX entry for citation.
+```BibTeX
+~
+```
 
+---
 ### Data preparation
 #### LibriSpeech Keywords
 Please find the LibriSpeech Keyworkds(LSK) [here]().
 #### Google Speech Commands
 The Google Speech Commands datasets are used for these experiments. Follow the instructions on this page to download and prepare the data for training. We used Speech Commands v0.01 (30 keywords in total) for our baseline.
 
-
+---
 ### Train a new model
 #### Dependencies
 ```sh
