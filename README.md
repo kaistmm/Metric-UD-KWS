@@ -10,6 +10,7 @@ Official code for Metric learning for user-defined keyword spotting
 '''Bash
 python train.py
 '''
+<code>python train.py</code>.
 
 ### License
 ---
