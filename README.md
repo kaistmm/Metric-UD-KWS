@@ -29,20 +29,34 @@ The Google Speech Commands datasets are used for these experiments. Follow the i
 $ conda create --file requirements.txt -n [env_name] -c pytorch -c conda-forge
 ```
 
-#### Pre-train
-```sh
-$ python trainKeywordNet.py --save_path [save_path] --augment True --dict_size [dict_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26]
+#### Training examples
+- Pre-training (Softmax, AM-Softmax)
+```
+python trainKeywordNet.py --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26]
+```
+- Pre-training (Prototypical, Angular Prototypical)
+```
+python trainKeywordNet.py --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26]
 ```
 
-#### Fine-tune
-```sh
-$ python trainKeywordNet.py --save_path [save_path] --augment True --dict_size 16 --trainfunc [trainfunc] --fine_tunning True --initial_model [model.pt] --lr 0.00001 --lr_step_size 1
+- Fine-tuning (Softmax, AM-Softmax)
+```
+python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26] --initial_model [model.pt] --lr 0.00001
+```
+- Fine-tuning (Prototypical, Angular Prototypical)
+```
+python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26] --initial_model [model.pt] --lr 0.00001
+```
+#### Testing Examples
+```
+python trainKeywordNet.py --eval --save_path [save_path] --initial_model [initial_model] --enroll_num [1, 5, 10 (# of shots)] --enroll_list [/path/to/enroll_list.txt] --test_acc_list [/path/to/test_acc_list.txt]
 ```
 
 #### Implemented loss functions
 ```
-Softmax (Softmax)
-Additive Margin Softmax loss(AM-Soft)
+Softmax (softmax)
+Additive Margin Softmax (amsoftmax)
+Prototypical (proto)
 Angular Prototypical (angleproto)
 ```
 
