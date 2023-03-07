@@ -1,5 +1,5 @@
-# Metric learning for user defined KWS
-Official code for Metric learning for user-defined keyword spotting
+# Metric learning for user-defined KWS
+This repository contains the official code for Metric learning for user-defined Keyword spotting. Our code is based on the code voxceleb trainer, which is implemented for the speaker recognition task.
 
 [METRIC LEARNING FOR USER-DEFINED KEYWORD SPOTTING](https://arxiv.org/pdf/2211.00439.pdf)
 
@@ -12,10 +12,10 @@ Official code for Metric learning for user-defined keyword spotting
 ### License
 
 
-### Installation
-<code>pin install -r requirements.txt</code>.
+### Dependencies
+<code>conda create --file requirements.txt -n [env_name] -c pytorch -c conda-forge</code>.
 
-### Dataset (LibriSpeech Keywords)
+### Data preparation (LibriSpeech Keywords)
 Please find the LibriSpeech Keyworkds(LSK) [here]().
 
 ### Pre-train
@@ -25,3 +25,16 @@ Please find the LibriSpeech Keyworkds(LSK) [here]().
 ### Fine-tune
 
 <code>$python trainKeywordNet.py --save_path [save_path] --augment True --dict_size 26 --batch_size 1 --trainfunc [trainfunc] --fine_tunning True --initial_model [model.pt] --lr 0.00001 --lr_step_size 1</code>.
+
+### Implemented loss functions
+'''
+Prototypical (proto)
+Angular Prototypical (angleproto)
+'''
+
+#### Implemented models
+For the model, res15 from *"deep residual learning for small-footprint keyword spotting", R. Tang & J. Lin, 2018, ICASSP* is used. Code for the model is based on [Honk: CNNs for Keyword Spotting](https://github.com/castorini/honk).
+```
+ResNet15
+ResNet26
+```
