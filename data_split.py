@@ -12,8 +12,8 @@ random.seed(0)
 parser = argparse.ArgumentParser(description = "Data Divider")
 
 parser.add_argument('--dataset_path', type=str, default='/mnt/work4/datasets/keyword/', help='parent path of dataset directory')
-parser.add_argument('--save_path', type=str, default='set_list', help='save path')
-parser.add_argument('--dataset_name', type=str, default='speech_commands_v0.02', help='dataset (directory) name')
+parser.add_argument('--save_path', type=str, default='./data_split', help='save path')
+parser.add_argument('--dataset_name', type=str, default='MSWC/mswc_microset/english/en/clips_wav/', help='dataset (directory) name')
 args = parser.parse_args()
 
 root = args.dataset_path + args.dataset_name
@@ -22,16 +22,22 @@ save_root = args.save_path
 ## for Google Speech Commands
 DATA_CONFIG = {'pre_defined': 'yes, no, up, down, left, right, on, off, stop, go'.split(', '),
 			   'user_defined': 'zero, one, two, three, four, five, six, seven, eight, nine'.split(', '),
-			   'unknown' : 'bed, bird, cat, dog, happy, house, marvin, sheila, tree, wow, forward, backward, follow, learn, visual'.split(', ')}
+			   'unknown' : 'bed, bird, cat, dog, happy, house, marvin, sheila, tree, wow, forward, boy, follow, learn, visual'.split(', ')}
 
-num_test	= 10 # number of test keywords 
+## for Qualcomm Keyword Dataset
+# DATA_CONFIG = {'pre_defined': 'hey_android, hi_galaxy, hi_lumina'.split(', '),
+# 			   'user_defined': 'hey_snapdragon'.split(', '),
+# 			   'unknown': 'bed, bird, cat, dog, happy, house, marvin, sheila, tree, wow, forward, backward, follow, learn, visual'.split(', ')}
+
+# num_test	= 10 # number of test keywords 
+num_test	= 10
 
 ## rand_sample SHOULD BE UNDER 190 (i.e. ~189) because of the number of positive samples ##
 rand_sample = 50 # number of pos & neg samples per one keyword 
 rand_select = 10 # number of randomly selected anchor wav
 
-num_audios  = 1500
-num_enroll  = 5
+num_audios  = 700
+num_enroll  = 10
 
 num_test_acc = 300 ## 10/6 300->3000
 num_test_unknown = num_test_acc // len(DATA_CONFIG['unknown'])
@@ -46,11 +52,11 @@ def key_list(typ, data_config=DATA_CONFIG, root=root):
 			tot_list[d] = []
 			for wav_f in os.listdir(os.path.join(root, d)):
 				tot_list[d].append(wav_f)
-
+	import pdb; pdb.set_trace()
 	return tot_list
 
 def make_enroll_list(user_keys, unknown_keys):
-	f_enroll = open(os.path.join(save_root, '5_300_enroll_list.txt'), 'w')
+	f_enroll = open(os.path.join(save_root, '10_micro_enroll_list.txt'), 'w')
 
 	enroll_dict = {}
 
@@ -80,7 +86,7 @@ def make_enroll_list(user_keys, unknown_keys):
 	return (user_evicted, unknown_evicted)
 
 def make_test_list(user_keys, unknown_keys):
-	f_test = open(os.path.join(save_root, '5_300_test_acc_list.txt'), 'w')
+	f_test = open(os.path.join(save_root, '10_micro_test_acc_list.txt'), 'w')
 
 	test_dict = {}
 
@@ -113,7 +119,7 @@ def make_test_list(user_keys, unknown_keys):
 	return unknown_evicted
 
 def make_fine_tune_list(pre_keys, unknown_keys):
-	f_train = open(os.path.join(save_root, 'fine_tune_list.txt'), 'w')
+	f_train = open(os.path.join(save_root, '10_micro_fine_tune_list.txt'), 'w')
 
 	fine_dict = {}
 
@@ -132,7 +138,7 @@ def make_fine_tune_list(pre_keys, unknown_keys):
 	f_train.close()
 
 def make_eer_test_list(data_config=DATA_CONFIG):
-	f_test   = open(os.path.join(save_root, 'test_list.txt'), 'w')
+	f_test   = open(os.path.join(save_root, '10_micro_test_list.txt'), 'w')
 	keys     = data_config['user_defined']
 	f_dict 	 = {}
 	anc_dict = {}

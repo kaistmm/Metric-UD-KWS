@@ -60,7 +60,7 @@ class ResNet15(nn.Module):
 
     def forward(self, x): 
         x = x.unsqueeze(1).clone()
-
+        # import pdb; pdb.set_trace()
         for i in range(self.n_layers + 1):
             y = F.relu(getattr(self, "conv{}".format(i))(x)) 
             if i == 0:

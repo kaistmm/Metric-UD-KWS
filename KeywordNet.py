@@ -62,7 +62,9 @@ class KeywordNet(nn.Module):
 
         assert self.lr_step in ['epoch', 'iteration']
         n_fft = 480
+        # n_fft = 960
         hop_length = 160
+        # hop_length = 320
         self.mfcc = transforms.MFCC(sample_rate=16000, n_mfcc = 40, melkwargs={'n_fft': n_fft, 'n_mels': n_mels, 'hop_length': hop_length,'mel_scale': 'htk'}).cuda()
         self.mixedprec = mixedprec
         
@@ -223,7 +225,7 @@ class KeywordNet(nn.Module):
     def evaluateAccuracyFromList(self, num_shots, enrollfilename, listfilename, enroll_path='', test_path='', noise_path=''):
         
         self.eval();
-        target_keys = '__silence__, zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
+        target_keys = '__silence__, him, about, out, its, your, their, will, some, the, when'.split(', ')
 
         files       = {}
         test_feat_by_key = {}
@@ -256,7 +258,6 @@ class KeywordNet(nn.Module):
                         enroll_files['__unknown__'].append(filename)
                     else:
                         enroll_files['__unknown__'] = [filename]
-
         for key, audios in enroll_files.items():
             feat_by_key[key] = []
 
@@ -279,7 +280,6 @@ class KeywordNet(nn.Module):
 
         for key, feats in feat_by_key.items():
             centroid_by_key[key] = torch.mean(torch.stack(feats), axis=0)
-
 
         ## Read all lines
         with open(listfilename) as listfile:
@@ -356,7 +356,6 @@ class KeywordNet(nn.Module):
                     continue;
                 all_preds.append(pred)
                 all_multi_labels.append(key)
-
         return (all_preds, all_multi_labels, all_scores, all_labels)
 
     def saveParameters(self, path):

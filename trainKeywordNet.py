@@ -44,7 +44,7 @@ parser.add_argument('--config', type=str, default=None,  help='Config YAML file'
  
 ## Data loader
 parser.add_argument('--batch_size', type=int, default=1,  help='Batch size');
-parser.add_argument('--metric_batch_size', type=int, default=256,  help='Dictionary size');
+parser.add_argument('--metric_batch_size', type=int, default=16,  help='Dictionary size');
 parser.add_argument('--nDataLoaderThread', type=int, default=20, help='Number of loader threads');
 
 ## Training details
@@ -68,10 +68,10 @@ parser.add_argument('--initial_model',  type=str, default="", help='Initial mode
 parser.add_argument('--save_path',      type=str, default="./data/test", help='Path for model and logs');
 
 # Training and test data
-parser.add_argument('--train_list',     type=str,   default="train_test_lists/pretrain/train_list_margin_1s_filter_1000.txt",     help='Train list');
-parser.add_argument('--test_list',      type=str,   default="train_test_lists/pretrain/test_list_margin_1s_filter_1000.txt",     help='Evaluation list');
-parser.add_argument('--train_path',     type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20", help='Absolute path to the train set');
-parser.add_argument('--test_path',      type=str,   default="/mnt/work4/datasets/keyword/words_filter_1s_cer20", help='Absolute path to the test set');
+parser.add_argument('--train_list',     type=str,   default="/mnt/scratch/datasets/keyword/words_filter_1s_cer20/train_list_margin_1s_filter_1000.txt",     help='Train list');
+parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/keyword/words_filter_1s_cer20/test_list_margin_1s_filter_1000.txt",     help='Evaluation list');
+parser.add_argument('--train_path',     type=str,   default="/mnt/scratch/datasets/keyword/words_filter_1s_cer20", help='Absolute path to the train set');
+parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/keyword/words_filter_1s_cer20", help='Absolute path to the test set');
 
 # Noise data
 parser.add_argument('--augment',        type=bool,  default=False,  help='Augment input')
@@ -79,16 +79,16 @@ parser.add_argument('--musan_path',     type=str,   default="/mnt/datasets/speec
 parser.add_argument('--noise_path',     type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
 
 #Google speech dataset
-parser.add_argument('--fine_train_list',     type=str,   default="train_test_lists/finetune/fine_train_list.txt",     help='Train list');
-parser.add_argument('--fine_train_path',     type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the train set');
+parser.add_argument('--fine_train_list',     type=str,   default="./data_split/fine_tune_list.txt",     help='Train list');
+parser.add_argument('--fine_train_path',     type=str,   default="/mnt/work4/datasets/keyword/qualcomm_keyword_speech_dataset", help='Absolute path to the train set');
 parser.add_argument('--fine_test_list',      type=str,   default="train_test_lists/finetune/fine_test_list.txt",     help='Evaluation list');
-parser.add_argument('--fine_test_path',      type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the test set');
-parser.add_argument('--test_acc_list',  type=str,   default="train_test_lists/test/10_test_acc_list.txt", help='Evaluation Accuracy list')
-parser.add_argument('--test_acc_path',  type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the test accuracy set')
+parser.add_argument('--fine_test_path',      type=str,   default="/mnt/work4/datasets/keyword/qualcomm_keyword_speech_dataset", help='Absolute path to the test set');
+parser.add_argument('--test_acc_list',  type=str,   default="./data_split/5_qualcomm_test_acc_list.txt", help='Evaluation Accuracy list')
+parser.add_argument('--test_acc_path',  type=str,   default="/mnt/work4/datasets/keyword/qualcomm_keyword_speech_dataset/", help='Absolute path to the test accuracy set')
 
 ## For enrollment
-parser.add_argument('--enroll_list',    type=str,   default="train_test_lists/enroll/10_enroll_list.txt", help='enroll list')
-parser.add_argument('--enroll_path',    type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02", help='Absolute path to the enroll set')
+parser.add_argument('--enroll_list',    type=str,   default="./data_split/5_qualcomm_enroll_list.txt", help='enroll list')
+parser.add_argument('--enroll_path',    type=str,   default="/mnt/work4/datasets/keyword/qualcomm_keyword_speech_dataset/", help='Absolute path to the enroll set')
 parser.add_argument('--enroll_num',     type=int,   default=10, help="number of shots")
 
 ## Model definition
@@ -101,7 +101,7 @@ parser.add_argument('--nClasses',       type=int,   default=1001,    help='Numbe
 ## For test only
 parser.add_argument('--eval', dest='eval', action='store_true', help='Only evaluation')
 
-## For fine-tunning, add layer, freezing
+## For fine-tuning, add layer, freezing
 parser.add_argument('--fine_tuning',        dest='fine_tuning',  action='store_true',  help='For fine tuning')
 parser.add_argument('--sample_per_class',      type=int,   default=300,    help='Number of samples per class')
 

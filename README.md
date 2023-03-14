@@ -31,20 +31,20 @@ PT_models/PTAP_FTAP_en_kr.model
 #### Training examples
 - Pre-training (Softmax, AM-Softmax)
 ```
-python trainKeywordNet.py --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26]
+python trainKeywordNet.py --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26, ConvMixer]
 ```
 - Pre-training (Prototypical, Angular Prototypical)
 ```
-python trainKeywordNet.py --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26]
+python trainKeywordNet.py --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26, ConvMixer]
 ```
 
 - Fine-tuning (Softmax, AM-Softmax)
 ```
-python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26] --initial_model [model.pt] --lr 0.00001
+python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26, ConvMixer] --initial_model [model.pt] --lr 0.00001
 ```
 - Fine-tuning (Prototypical, Angular Prototypical)
 ```
-python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26] --initial_model [model.pt] --lr 0.00001
+python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26, ConvMixer] --initial_model [model.pt] --lr 0.00001
 ```
 #### Testing Examples
 ```
@@ -64,4 +64,5 @@ For the model, res15 from *"deep residual learning for small-footprint keyword s
 ```
 ResNet15
 ResNet26
+ConvMixer
 ```

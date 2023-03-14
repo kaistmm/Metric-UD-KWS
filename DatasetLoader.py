@@ -150,6 +150,7 @@ class AugmentWAV(object):
     def __init__(self, musan_path):
 
         self.max_audio = 16000
+        # self.max_audio = 32000
 
         self.noisetypes = ['noise','speech','music']
 
@@ -212,6 +213,8 @@ def load_silence(max_audio=16000):
 
     if audio.shape[0] != 16000 or audio_pos.shape[0] != 16000:
         print('wrong')
+    # if audio.shape[0] != 32000 or audio_pos.shape[0] != 32000:
+        # print('wrong')
 
     feats = []
     feats.append(audio)
@@ -230,6 +233,7 @@ def load_wav(filelist, index):
     audio_pos, _ = soundfile.read(choice)
 
     max_audio = sr * 1 # 1 second
+    # max_audio = sr * 2 # 2 second
     
     len_audio = audio.shape[0]
     len_audio_pos = audio_pos.shape[0]
@@ -244,19 +248,25 @@ def load_wav(filelist, index):
     else:
         margin = len_audio - 16000
         audio = audio[int(margin/2):16000 + int(margin/2)]
+        # margin = len_audio - 32000
+        # audio = audio[int(margin/2):32000 + int(margin/2)]
 
     if len_audio_pos < max_audio:
         shortage = math.floor((max_audio - len_audio_pos + 1) / 2)
         if len_audio_pos % 2 == 0:
             audio_pos = numpy.pad(audio_pos, (shortage,shortage), 'constant')           
-        else :
+        else:
             audio_pos = numpy.pad(audio_pos, (shortage,shortage-1), 'constant')
     else:
         margin = len_audio_pos - 16000
         audio_pos = audio_pos[int(margin/2):16000 + int(margin/2)]
+        # margin = len_audio_pos - 32000
+        # audio_pos = audio_pos[int(margin/2):32000 + int(margin/2)]
    
     if audio.shape[0] != 16000 or audio_pos.shape[0] != 16000 : 
         print('wrong')
+    # if audio.shape[0] != 32000 or audio_pos.shape[0] != 32000 : 
+        # print('wrong')
 
     feats = []
     feats.append(audio)
@@ -294,6 +304,8 @@ def loadWAV(filename):
     else:
         margin = len_audio - 16000
         audio = audio[int(margin/2):16000 + int(margin/2)]
+        # margin = len_audio - 32000
+        # audio = audio[int(margin/2):32000 + int(margin/2)]
 
     return audio
 
