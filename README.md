@@ -67,4 +67,5 @@ For the model, res15 from *"deep residual learning for small-footprint keyword s
 ```
 ResNet15
 ResNet26
+ConvMixer
 ```
