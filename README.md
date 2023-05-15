@@ -1,11 +1,11 @@
 # Metric learning for user-defined KWS
 This repository contains the official code for Metric learning for user-defined Keyword spotting. Our code is based on the code voxceleb trainer, which is implemented for the speaker recognition task.
 
+<img width="1024" alt="image" src="https://github.com/kaistmm/Metric-UD-KWS/assets/71073008/8c798afe-8641-48eb-a5e2-33f261e2993f">
+
 Paper: [METRIC LEARNING FOR USER-DEFINED KEYWORD SPOTTING](https://arxiv.org/pdf/2211.00439.pdf)
 
 [Project page](https://mm.kaist.ac.kr/projects/kws/)
-
-<img width="1024" alt="image" src="https://github.com/kaistmm/Metric-UD-KWS/assets/71073008/8c798afe-8641-48eb-a5e2-33f261e2993f">
 
 If you find our paper useful in your research, please use the following BibTeX entry for citation.
 ```BibTeX
