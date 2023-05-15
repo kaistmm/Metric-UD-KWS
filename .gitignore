@@ -137,3 +137,4 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+README_copy.md

@@ -1,50 +1,53 @@
-## User-defined Wake-up-word Detection
+# Metric learning for user-defined KWS
+This repository contains the official code for Metric learning for user-defined Keyword spotting. Our code is based on the code voxceleb trainer, which is implemented for the speaker recognition task.
 
-This repository contains the baseline code for wake-up-word detection by using metric learning. Our baseline code is based on the code [voxceleb trainer](https://github.com/clovaai/voxceleb_trainer), which is implemented for the speaker recognition task.
+[METRIC LEARNING FOR USER-DEFINED KEYWORD SPOTTING](https://arxiv.org/pdf/2211.00439.pdf)
 
+[Project page](https://mm.kaist.ac.kr/projects/kws/)
+
+If you find our paper useful in your research, please use the following BibTeX entry for citation.
+```BibTeX
+@inproceedings{jung2023metric,
+  title={Metric Learning for User-Defined Keyword Spotting},
+  author={Jung, Jaemin and Kim, Youkyum and Park, Jihwan and Lim, Youshin and Kim, Byeong-Yeol and Jang, Youngjoon and Chung, Joon Son},
+  booktitle={ICASSP 2023-2023 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+  pages={1--5},
+  year={2023},
+  organization={IEEE}
+}
+```
+
+---
+### Data preparation
+#### LibriSpeech Keywords
+Please find the LibriSpeech Keyworkds(LSK) [here]().
+#### Google Speech Commands
+The Google Speech Commands datasets are used for these experiments. Follow the instructions on this page to download and prepare the data for training. We used Speech Commands v0.01 (30 keywords in total) for our baseline.
+
+---
+### Train a new model
 #### Dependencies
-```
+```sh
 conda create --file requirements.txt -n [env_name] -c pytorch -c conda-forge
-```
-
-#### Data preparation
-
-The [Google Speech Commands](https://www.tensorflow.org/datasets/catalog/speech_commands) datasets are used for these experiments. Follow the instructions on [this page](https://pytorch.org/tutorials/intermediate/speech_command_classification_with_torchaudio_tutorial.html) to download and prepare the data for training. We used Speech Commands **v0.01** (30 keywords in total) for our baseline.
-
-The dataset is split into train dataset and test dataset. Train dataset is comprised with 20 kinds of keywords out of 30. Test dataset is comprised with the other 10 kinds of keywords. Lists for both of the split dataset are in the directory of 'dataset_split'. 
-
-#### Data preparation for LSK
-- Step 1. Run ```LSK_preprocess.py```.
-- Step 2. Run ```LSK_make_list.py```.
-
-#### Pre-trained models
-- Pre-trained on LSK & Fine-tuned on GSC (both using angleproto loss)
-```
-PT_models/PTAP_FTAP_en.model
-```
-
-- Pre-trained on LSK+KSK & Fine-tuned on GSC (both using angleproto loss)
-```    
-PT_models/PTAP_FTAP_en_kr.model
 ```
 
 #### Training examples
 - Pre-training (Softmax, AM-Softmax)
 ```
-python trainKeywordNet.py --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26, ConvMixer]
+python trainKeywordNet.py --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26]
 ```
 - Pre-training (Prototypical, Angular Prototypical)
 ```
-python trainKeywordNet.py --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26, ConvMixer]
+python trainKeywordNet.py --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26]
 ```
 
 - Fine-tuning (Softmax, AM-Softmax)
 ```
-python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26, ConvMixer] --initial_model [model.pt] --lr 0.00001
+python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --batch_size [batch_size] --trainfunc [trainfunc] --model [ResNet15, ResNet26] --initial_model [model.pt] --lr 0.00001
 ```
 - Fine-tuning (Prototypical, Angular Prototypical)
 ```
-python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26, ConvMixer] --initial_model [model.pt] --lr 0.00001
+python trainKeywordNet.py --fine_tuning --save_path [save_path] --augment True --metric_batch_size [metric_batch_size] --batch_size 1 --trainfunc [trainfunc] --model [ResNet15, ResNet26] --initial_model [model.pt] --lr 0.00001
 ```
 #### Testing Examples
 ```
@@ -64,5 +67,4 @@ For the model, res15 from *"deep residual learning for small-footprint keyword s
 ```
 ResNet15
 ResNet26
-ConvMixer
 ```
