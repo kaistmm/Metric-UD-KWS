@@ -7,11 +7,13 @@ This repository contains the official code for Metric learning for user-defined 
 
 If you find our paper useful in your research, please use the following BibTeX entry for citation.
 ```BibTeX
-@article{jung2022metric,
-  title={Metric Learning for User-defined Keyword Spotting},
+@inproceedings{jung2023metric,
+  title={Metric Learning for User-Defined Keyword Spotting},
   author={Jung, Jaemin and Kim, Youkyum and Park, Jihwan and Lim, Youshin and Kim, Byeong-Yeol and Jang, Youngjoon and Chung, Joon Son},
-  journal={arXiv preprint arXiv:2211.00439},
-  year={2022}
+  booktitle={ICASSP 2023-2023 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+  pages={1--5},
+  year={2023},
+  organization={IEEE}
 }
 ```
 
