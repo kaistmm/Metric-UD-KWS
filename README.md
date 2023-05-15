@@ -5,6 +5,8 @@ This repository contains the official code for Metric learning for user-defined 
 
 [Project page](https://mm.kaist.ac.kr/projects/kws/)
 
+<img width="1024" alt="image" src="https://github.com/kaistmm/Metric-UD-KWS/assets/71073008/8c798afe-8641-48eb-a5e2-33f261e2993f">
+
 If you find our paper useful in your research, please use the following BibTeX entry for citation.
 ```BibTeX
 @inproceedings{jung2023metric,
