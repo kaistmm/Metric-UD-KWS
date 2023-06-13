@@ -15,6 +15,14 @@ exps/
 data/
 np_results/
 results/
+tts_enroll_audios/
+data_split_mswc.py
+data_split.py
+downsample.py
+LSK_make_list.py
+LSK_preprocess.py
+opustowav.py
+qualcomm.py
 # Accepted text files
 !requirements.txt
 !train_list.txt

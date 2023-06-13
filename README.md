@@ -19,11 +19,19 @@ If you find our paper useful in your research, please use the following BibTeX e
 
 ---
 ### Data preparation
+This code is implemented for mono (single-channel) 16kHz audios. If you need to resample your audios, please utilize [ffmpeg](https://ffmpeg.org).
 #### LibriSpeech Keywords
 Please find the LibriSpeech Keyworkds(LSK) [here]().
 #### Google Speech Commands
 The Google Speech Commands datasets are used for these experiments. Follow the instructions on this page to download and prepare the data for training. We used Speech Commands v0.01 (30 keywords in total) for our baseline.
 
+---
+### Customize your target keywords
+Default target keywords are ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'].
+If you don't set the target keywords, default keywords are treated as the target keywords.
+```
+python trainKeywordNet.py --target_keys bed bird sheila ...
+```
 ---
 ### Train a new model
 #### Dependencies

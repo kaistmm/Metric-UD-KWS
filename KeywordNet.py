@@ -222,10 +222,9 @@ class KeywordNet(nn.Module):
     ## ===== ===== ===== ===== ===== ===== ===== =====
     ''' Evaluate accuracy from list '''
     ## ===== ===== ===== ===== ===== ===== ===== =====
-    def evaluateAccuracyFromList(self, num_shots, enrollfilename, listfilename, enroll_path='', test_path='', noise_path=''):
+    def evaluateAccuracyFromList(self, target_keys, num_shots, enrollfilename, listfilename, enroll_path='', test_path='', noise_path=''):
         
         self.eval();
-        target_keys = '__silence__, him, about, out, its, your, their, will, some, the, when'.split(', ')
 
         files       = {}
         test_feat_by_key = {}
@@ -333,8 +332,10 @@ class KeywordNet(nn.Module):
         all_scores = []
         all_labels = []
 
-        del centroid_by_key['__unknown__']
-        del centroid_by_key['__silence__']
+        if '__unknown__' in centroid_by_key:
+            del centroid_by_key['__unknown__']
+        if '__silence__' in centroid_by_key:
+            del centroid_by_key['__silence__']
 
         for key, feats in test_feat_by_key.items():
             for feat in feats:

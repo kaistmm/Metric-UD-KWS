@@ -76,20 +76,23 @@ parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datase
 # Noise data
 parser.add_argument('--augment',        type=bool,  default=False,  help='Augment input')
 parser.add_argument('--musan_path',     type=str,   default="/mnt/datasets/speech_augmentation/musan_split", help='Absolute path to the test set');
-parser.add_argument('--noise_path',     type=str,   default="/mnt/work4/datasets/keyword/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
+parser.add_argument('--noise_path',     type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
 
 #Google speech dataset
 parser.add_argument('--fine_train_list',     type=str,   default="./data_split/fine_tune_list.txt",     help='Train list');
 parser.add_argument('--fine_train_path',     type=str,   default="/mnt/work4/datasets/keyword/qualcomm_keyword_speech_dataset", help='Absolute path to the train set');
 parser.add_argument('--fine_test_list',      type=str,   default="train_test_lists/finetune/fine_test_list.txt",     help='Evaluation list');
 parser.add_argument('--fine_test_path',      type=str,   default="/mnt/work4/datasets/keyword/qualcomm_keyword_speech_dataset", help='Absolute path to the test set');
-parser.add_argument('--test_acc_list',  type=str,   default="./data_split/5_qualcomm_test_acc_list.txt", help='Evaluation Accuracy list')
-parser.add_argument('--test_acc_path',  type=str,   default="/mnt/work4/datasets/keyword/qualcomm_keyword_speech_dataset/", help='Absolute path to the test accuracy set')
+parser.add_argument('--test_acc_list',  type=str,   default="./train_test_lists/test/1_test_acc_list.txt", help='Evaluation Accuracy list')
+parser.add_argument('--test_acc_path',  type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/", help='Absolute path to the test accuracy set')
+
+## Set target keywords
+parser.add_argument('--target_keys','--list', nargs='+', default=None, help='Set keywords, e.g., --target_keys zero one two three ...')
 
 ## For enrollment
-parser.add_argument('--enroll_list',    type=str,   default="./data_split/5_qualcomm_enroll_list.txt", help='enroll list')
-parser.add_argument('--enroll_path',    type=str,   default="/mnt/work4/datasets/keyword/qualcomm_keyword_speech_dataset/", help='Absolute path to the enroll set')
-parser.add_argument('--enroll_num',     type=int,   default=10, help="number of shots")
+parser.add_argument('--enroll_list',    type=str,   default="./train_test_lists/enroll/1_enroll_tts_list.txt", help='enroll list')
+parser.add_argument('--enroll_path',    type=str,   default="/mnt/work4/datasets/keyword/LJSpeech/16k/", help='Absolute path to the enroll set')
+parser.add_argument('--enroll_num',     type=int,   default=1, help="number of shots")
 
 ## Model definition
 parser.add_argument('--n_mels',         type=int,   default=40,     help='Number of mel filterbanks');
@@ -149,6 +152,12 @@ if not(os.path.exists(result_save_path)):
 ## Load models
 s = KeywordNet(**vars(args));
 
+## Set default target keywords
+if args.target_keys == None:
+    args.target_keys = '__silence__, zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
+else:
+    args.target_keys.append('__silence__')
+
 it          = 1;
 prevloss    = float("inf");
 sumloss     = 0;
@@ -170,7 +179,7 @@ for ii in range(0,it-1):
     s.__scheduler__.step()
 
 if args.eval == True:
-    pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
+    pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.target_keys, args.enroll_num, args.enroll_list, args.test_acc_list, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
     result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1])
     f1, acc = f1_and_acc(pred, lab, None)
     print('EER %2.4f, FRR at FAR=2.5 %2.4f, FRR at FAR=10 %2.4f, F1-score %2.4f, Acc %2.4f'%(result[1], result[2], result[3], f1.mean(), acc))
@@ -226,7 +235,7 @@ while(1):
     if it % args.test_interval == 0:
 
         print(time.strftime("%Y-%m-%d %H:%M:%S"), it, "Evaluating...");
-        pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.enroll_num, args.enroll_list, args.test_acc_list, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
+        pred, lab, sc, eer_lab = s.evaluateAccuracyFromList(args.target_keys, args.enroll_num, args.enroll_list, args.test_acc_list, enroll_path=args.enroll_path, test_path=args.test_acc_path, noise_path=args.noise_path)
         result = tuneThresholdfromScore(sc, eer_lab, [1, 0.1]);
         f1, acc = f1_and_acc(pred, lab, None)
 
