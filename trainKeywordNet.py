@@ -79,7 +79,7 @@ parser.add_argument('--musan_path',     type=str,   default="/mnt/datasets/speec
 parser.add_argument('--noise_path',     type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
 
 #Google speech dataset
-parser.add_argument('--fine_train_list',     type=str,   default="./train_test_lists/finetune/fine_tune_list.txt",     help='Train list');
+parser.add_argument('--fine_train_list',     type=str,   default="./train_test_lists/finetune/fine_train_list.txt",     help='Train list');
 parser.add_argument('--fine_train_path',     type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/", help='Absolute path to the train set');
 parser.add_argument('--fine_test_list',      type=str,   default="./train_test_lists/finetune/fine_test_list.txt",     help='Evaluation list');
 parser.add_argument('--fine_test_path',      type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/", help='Absolute path to the test set');
