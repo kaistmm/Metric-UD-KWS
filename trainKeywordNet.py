@@ -68,8 +68,8 @@ parser.add_argument('--initial_model',  type=str, default="", help='Initial mode
 parser.add_argument('--save_path',      type=str, default="./data/test", help='Path for model and logs');
 
 # Training and test data
-parser.add_argument('--train_list',     type=str,   default="/mnt/scratch/datasets/keyword/words_filter_1s_cer20/train_list_margin_1s_filter_1000.txt",     help='Train list');
-parser.add_argument('--test_list',      type=str,   default="/mnt/scratch/datasets/keyword/words_filter_1s_cer20/test_list_margin_1s_filter_1000.txt",     help='Evaluation list');
+parser.add_argument('--train_list',     type=str,   default="./train_test_lists/pretrain/train_list_margin_1s_filter_1000.txt",     help='Train list');
+parser.add_argument('--test_list',      type=str,   default="./train_test_lists/pretrain/test_list_margin_1s_filter_1000.txt",     help='Evaluation list');
 parser.add_argument('--train_path',     type=str,   default="/mnt/scratch/datasets/keyword/words_filter_1s_cer20", help='Absolute path to the train set');
 parser.add_argument('--test_path',      type=str,   default="/mnt/scratch/datasets/keyword/words_filter_1s_cer20", help='Absolute path to the test set');
 
@@ -79,7 +79,7 @@ parser.add_argument('--musan_path',     type=str,   default="/mnt/datasets/speec
 parser.add_argument('--noise_path',     type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
 
 #Google speech dataset
-parser.add_argument('--fine_train_list',     type=str,   default="./train_test_lists/fine_tune_list.txt",     help='Train list');
+parser.add_argument('--fine_train_list',     type=str,   default="./train_test_lists/finetune/fine_tune_list.txt",     help='Train list');
 parser.add_argument('--fine_train_path',     type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/", help='Absolute path to the train set');
 parser.add_argument('--fine_test_list',      type=str,   default="./train_test_lists/finetune/fine_test_list.txt",     help='Evaluation list');
 parser.add_argument('--fine_test_path',      type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/", help='Absolute path to the test set');
