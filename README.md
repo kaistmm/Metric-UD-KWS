@@ -21,7 +21,7 @@ If you find our paper useful in your research, please use the following BibTeX e
 
 ---
 ### Data preparation
-This code is implemented for mono (single-channel) 16kHz audios. If you need to resample your audios, please utilize [ffmpeg](https://ffmpeg.org).
+This code is implemented for mono (single-channel) audios in 16kHz. If you need to resample your audios, please utilize [ffmpeg](https://ffmpeg.org).
 #### LibriSpeech Keywords
 Please find the LibriSpeech Keyworkds(LSK) [here]().
 #### Google Speech Commands
