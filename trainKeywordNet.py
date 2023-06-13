@@ -119,9 +119,6 @@ parser.add_argument('--env_iteration', type=int, default=5,  help='Iterations of
 ## Remove silence or not
 parser.add_argument('--no_silence', type=bool, default=False, help='If True, no silence during training')
 
-parser.add_argument('--np_save_path', type=str, default='np_results/ICASSP', help='numpy file save path')
-parser.add_argument('--np_file_name', type=str, default='', help='numpy file name')
-
 args = parser.parse_args();
 
 ############################################
