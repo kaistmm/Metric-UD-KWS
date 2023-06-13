@@ -79,20 +79,20 @@ parser.add_argument('--musan_path',     type=str,   default="/mnt/datasets/speec
 parser.add_argument('--noise_path',     type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/_background_noise_", help='Absolute path for the silence noise')
 
 #Google speech dataset
-parser.add_argument('--fine_train_list',     type=str,   default="./data_split/fine_tune_list.txt",     help='Train list');
-parser.add_argument('--fine_train_path',     type=str,   default="/mnt/work4/datasets/keyword/qualcomm_keyword_speech_dataset", help='Absolute path to the train set');
-parser.add_argument('--fine_test_list',      type=str,   default="train_test_lists/finetune/fine_test_list.txt",     help='Evaluation list');
-parser.add_argument('--fine_test_path',      type=str,   default="/mnt/work4/datasets/keyword/qualcomm_keyword_speech_dataset", help='Absolute path to the test set');
-parser.add_argument('--test_acc_list',  type=str,   default="./train_test_lists/test/1_test_acc_list.txt", help='Evaluation Accuracy list')
+parser.add_argument('--fine_train_list',     type=str,   default="./train_test_lists/fine_tune_list.txt",     help='Train list');
+parser.add_argument('--fine_train_path',     type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/", help='Absolute path to the train set');
+parser.add_argument('--fine_test_list',      type=str,   default="./train_test_lists/finetune/fine_test_list.txt",     help='Evaluation list');
+parser.add_argument('--fine_test_path',      type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/", help='Absolute path to the test set');
+parser.add_argument('--test_acc_list',  type=str,   default="./train_test_lists/test/10_test_acc_list.txt", help='Evaluation Accuracy list')
 parser.add_argument('--test_acc_path',  type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/", help='Absolute path to the test accuracy set')
 
 ## Set target keywords
 parser.add_argument('--target_keys','--list', nargs='+', default=None, help='Set keywords, e.g., --target_keys zero one two three ...')
 
 ## For enrollment
-parser.add_argument('--enroll_list',    type=str,   default="./train_test_lists/enroll/1_enroll_tts_list.txt", help='enroll list')
-parser.add_argument('--enroll_path',    type=str,   default="/mnt/work4/datasets/keyword/LJSpeech/16k/", help='Absolute path to the enroll set')
-parser.add_argument('--enroll_num',     type=int,   default=1, help="number of shots")
+parser.add_argument('--enroll_list',    type=str,   default="./train_test_lists/enroll/10_enroll_list.txt", help='enroll list')
+parser.add_argument('--enroll_path',    type=str,   default="/mnt/datasets/kws/speech_commands_v0.02/", help='Absolute path to the enroll set')
+parser.add_argument('--enroll_num',     type=int,   default=10, help="number of shots")
 
 ## Model definition
 parser.add_argument('--n_mels',         type=int,   default=40,     help='Number of mel filterbanks');
