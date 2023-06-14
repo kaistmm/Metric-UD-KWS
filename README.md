@@ -26,7 +26,7 @@ This code is implemented for mono (single-channel) audios in 16kHz. If you need 
 We will publish LibriSpeech Keywords (LSK) dataset soon.
 <!-- Please find the LibriSpeech Keyworkds(LSK) [here](). -->
 #### Google Speech Commands
-The Google Speech Commands datasets are used for these experiments. Follow the instructions on this page to download and prepare the data for training. We used Speech Commands v0.02 (35 keywords in total) for our baseline.
+The Google Speech Commands datasets are used for these experiments. Follow the instructions on [this page](https://www.tensorflow.org/datasets/catalog/speech_commands?hl=ko) to download and prepare the data for training. We used Speech Commands v0.02 (35 keywords in total) for our baseline.
 
 ---
 ### Customize your target keywords
