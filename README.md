@@ -23,7 +23,8 @@ If you find our paper useful in your research, please use the following BibTeX e
 ### Data preparation
 This code is implemented for mono (single-channel) audios in 16kHz. If you need to resample your audios, please utilize [ffmpeg](https://ffmpeg.org).
 #### LibriSpeech Keywords
-We will publish LibriSpeech Keywords (LSK) dataset soon.
+The dataset size is large, so we share the dataset creation code.
+https://github.com/jjm5811/Keyword_FA/tree/master
 <!-- Please find the LibriSpeech Keyworkds(LSK) [here](). -->
 #### Google Speech Commands
 The Google Speech Commands datasets are used for these experiments. Follow the instructions on [this page](https://www.tensorflow.org/datasets/catalog/speech_commands?hl=ko) to download and prepare the data for training. We used Speech Commands v0.02 (35 keywords in total) for our baseline.
